@@ -9,11 +9,16 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "framer-motion": "^11.15.0",
+    "howler": "^2.2.4",
     "next": "16.1.6",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "react-zoom-pan-pinch": "^3.6.0",
+    "roughjs": "^4.6.0"
   },
   "devDependencies": {
+    "@types/howler": "^2.2.12",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
