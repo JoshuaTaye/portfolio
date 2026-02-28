@@ -40,7 +40,7 @@ export const graphNodes: Record<string, GraphNodeData> = {
     id: "skills",
     label: "Skills",
     parentId: "",
-    children: ["skill-frontend", "skill-backend", "skill-devops", "skill-practices"],
+    children: [],
   },
   metrics: {
     id: "metrics",
@@ -186,34 +186,6 @@ export const graphNodes: Record<string, GraphNodeData> = {
     label: "Experience",
     parentId: "about",
     description: "Freelance full-stack, Lead Frontend at Go Gerami, community platform development.",
-    children: [],
-  },
-  "skill-frontend": {
-    id: "skill-frontend",
-    label: "Frontend",
-    parentId: "skills",
-    description: "React, Angular, Next.js, TypeScript, Tailwind CSS, Framer Motion",
-    children: [],
-  },
-  "skill-backend": {
-    id: "skill-backend",
-    label: "Backend",
-    parentId: "skills",
-    description: "Node.js, Spring Boot, PostgreSQL, MongoDB, GraphQL, REST APIs, Prisma",
-    children: [],
-  },
-  "skill-devops": {
-    id: "skill-devops",
-    label: "DevOps & Tools",
-    parentId: "skills",
-    description: "Docker, GitHub Actions, Vercel, Linux, Nginx, CI/CD",
-    children: [],
-  },
-  "skill-practices": {
-    id: "skill-practices",
-    label: "Practices",
-    parentId: "skills",
-    description: "System Design, Testing, Accessibility, Performance Optimization, Agile",
     children: [],
   },
 };

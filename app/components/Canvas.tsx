@@ -13,6 +13,7 @@ import { SketchButtonNode } from "./SketchButtonNode";
 import { ThemeToggle } from "./ThemeToggle";
 import { SocialIcon, isSocialIcon } from "./SocialIcons";
 import { ProjectModal } from "./ProjectModal";
+import { SkillsList } from "./SkillsList";
 import {
   projects,
   aboutText,
@@ -339,6 +340,16 @@ export function Canvas() {
                           />
                         ) : null;
                       })()}
+                      {skillsPos && expandedPath[0] === "skills" && (
+                        <SketchEdge
+                          key="edge-skills-list"
+                          x1={skillsPos.x}
+                          y1={skillsPos.y}
+                          x2={skillsPos.x}
+                          y2={skillsPos.y + SKILLS_H / 2 + 160}
+                          animate
+                        />
+                      )}
                     </>
                   );
                 })()}
@@ -775,6 +786,16 @@ export function Canvas() {
                 </SectionNode>
               </div>
 
+              <AnimatePresence>
+                {expandedPath[0] === "skills" && (
+                  <SkillsList
+                    x={SKILLS_W / 2 - 150}
+                    y={SKILLS_H + 24}
+                    width={300}
+                    darkMode={darkMode}
+                  />
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Metrics — display only, no expand */}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import rough from "roughjs";
 import { skillCategories } from "@/app/lib/seed-data";
 import { theme } from "@/app/lib/theme";
@@ -14,6 +14,10 @@ type SkillsListProps = {
 };
 
 const LIST_W = 300;
+const FLOAT_DURATION_Y = 9;
+const FLOAT_DURATION_ROTATE = 12;
+const FLOAT_AMPLITUDE_Y = 7;
+const FLOAT_AMPLITUDE_ROTATE = 0.5;
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -36,6 +40,7 @@ export function SkillsList({ x, y, width = LIST_W, darkMode = false }: SkillsLis
   const borderRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const height = useRef(0);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
     const el = containerRef.current;
@@ -50,8 +55,8 @@ export function SkillsList({ x, y, width = LIST_W, darkMode = false }: SkillsLis
     const node = rc.rectangle(2, 2, width - 4, h - 4, {
       stroke: "var(--theme-pencil-light)",
       strokeWidth: 0.9,
-      roughness: 1.3,
-      bowing: 0.5,
+      roughness: 1.4,
+      bowing: 0.6,
     });
     if (node) svg.appendChild(node);
   });
@@ -59,23 +64,34 @@ export function SkillsList({ x, y, width = LIST_W, darkMode = false }: SkillsLis
   return (
     <motion.div
       className="absolute"
-      style={{ left: x, top: y, width }}
-      initial={{ opacity: 0, scale: 0.92, y: 16 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.92, y: 16 }}
-      transition={{ duration: 0.45, ease: theme.easing.calm }}
+      style={{
+        left: x,
+        top: y,
+        width,
+        filter: "var(--theme-card-shadow)",
+      }}
+      initial={{ opacity: 0, scale: 0.82 }}
+      animate={{
+        opacity: 1,
+        scale: 1,
+        y: reducedMotion ? 0 : [0, FLOAT_AMPLITUDE_Y, 0],
+        rotate: reducedMotion ? 0 : [0, FLOAT_AMPLITUDE_ROTATE, -FLOAT_AMPLITUDE_ROTATE, 0],
+      }}
+      exit={{ opacity: 0, scale: 0.82 }}
+      transition={
+        reducedMotion
+          ? { duration: 0.01 }
+          : {
+              opacity: { duration: 0.55, ease: [0.25, 0.1, 0.25, 1] },
+              scale: { duration: 0.55, ease: [0.25, 0.1, 0.25, 1] },
+              y: { duration: FLOAT_DURATION_Y, repeat: Infinity, ease: "easeInOut" },
+              rotate: { duration: FLOAT_DURATION_ROTATE, repeat: Infinity, ease: "easeInOut" },
+            }
+      }
     >
-      <svg
-        ref={borderRef}
-        className="pointer-events-none absolute inset-0 z-[5]"
-        width={width}
-        height={0}
-        aria-hidden
-      />
-
       <div
         ref={containerRef}
-        className="relative z-10 overflow-hidden rounded-sm bg-[var(--theme-card-bg)]"
+        className="relative overflow-hidden bg-[var(--theme-card-bg)]"
         style={{ width }}
       >
         <motion.div
@@ -93,7 +109,7 @@ export function SkillsList({ x, y, width = LIST_W, darkMode = false }: SkillsLis
                 {cat.items.map((item) => (
                   <span
                     key={item}
-                    className="rounded-sm border border-[var(--theme-pencil-light)] px-2 py-0.5 text-[11px] leading-relaxed text-[var(--theme-base-muted)] transition-colors duration-200 hover:border-[var(--theme-accent)] hover:text-[var(--theme-base)]"
+                    className="rounded border border-[var(--theme-pencil-light)] px-1.5 py-0.5 text-[10px] text-[var(--theme-base-muted)] transition-colors duration-200 hover:border-[var(--theme-accent)] hover:text-[var(--theme-base)]"
                   >
                     {item}
                   </span>
@@ -103,6 +119,14 @@ export function SkillsList({ x, y, width = LIST_W, darkMode = false }: SkillsLis
           ))}
         </motion.div>
       </div>
+
+      <svg
+        ref={borderRef}
+        className="pointer-events-none absolute inset-0"
+        width={width}
+        height={0}
+        aria-hidden
+      />
     </motion.div>
   );
 }
