@@ -58,6 +58,8 @@ const ROOT_SIZES: Record<string, { w: number; h: number }> = {
   projects: { w: 460, h: 240 },
   about: { w: 440, h: 200 },
   contact: { w: 360, h: 180 },
+  skills: { w: 420, h: 200 },
+  metrics: { w: 420, h: 240 },
 };
 
 function cardRect(id: string, pos: { x: number; y: number }) {
@@ -77,7 +79,7 @@ function rectsOverlap(
   return !(a.right < b.left || b.right < a.left || a.bottom < b.top || b.bottom < a.top);
 }
 
-const ROOT_IDS = new Set(["intro", "projects", "about", "contact"]);
+const ROOT_IDS = new Set(["intro", "projects", "about", "contact", "skills", "metrics"]);
 
 /** Nudge positions so no two cards overlap. Push earlier nodes away from later (newly expanded) ones so new nodes stay visible; roots stay fixed. */
 function resolveOverlaps(positions: PositionMap, order: string[]): void {
@@ -156,27 +158,14 @@ export function getCardPositions(
     const depth = i;
     const radius = radiusForDepth(depth, childIds.length);
 
-    if (parentId === "contact" && childIds.includes("email")) {
-      // Contact layout: email tucked under the contact section; others along arc
-      const contactH = ROOT_SIZES.contact.h;
-      const emailTuckedY = parentPos.y + contactH / 2 + CARD_H / 2 + CARD_PAD;
-      const others = childIds.filter((id) => id !== "email");
-      const arcPositions = radialPositions(
-        parentPos.x,
-        parentPos.y,
-        others.length,
-        radius,
-        -Math.PI / 2,
-        ARC_SPREAD
-      );
-      let arcIndex = 0;
-      childIds.forEach((id) => {
+    if (parentId === "about") {
+      const verticalGap = 180;
+      childIds.forEach((id, j) => {
+        positions.set(id, {
+          x: parentPos.x,
+          y: parentPos.y + (j + 1) * verticalGap,
+        });
         order.push(id);
-        if (id === "email") {
-          positions.set(id, { x: parentPos.x, y: emailTuckedY });
-        } else {
-          positions.set(id, arcPositions[arcIndex++]);
-        }
       });
     } else {
       const childPositions = radialPositions(

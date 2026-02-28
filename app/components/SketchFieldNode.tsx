@@ -81,7 +81,7 @@ export function SketchFieldNode({
           width={width - 4}
           height={height - 4}
           rx={1}
-          fill="var(--theme-background)"
+          fill="var(--theme-card-bg)"
           style={{ pointerEvents: "none" }}
         />
         <svg
@@ -94,7 +94,7 @@ export function SketchFieldNode({
         />
         <foreignObject x={8} y={6} width={width - 16} height={height - 12}>
           <div
-            className="flex h-full w-full flex-col gap-0.5 bg-[var(--theme-background)]"
+            className="flex h-full w-full flex-col gap-0.5 bg-[var(--theme-card-bg)]"
             style={{ fontFamily: "var(--font-sans), system-ui, sans-serif" }}
           >
             <label

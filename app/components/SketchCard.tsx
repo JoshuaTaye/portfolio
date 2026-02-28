@@ -112,7 +112,7 @@ export function SketchCard({
           width={width - 4}
           height={height - 4}
           rx={1}
-          fill="var(--theme-background)"
+          fill="var(--theme-card-bg)"
           style={{ pointerEvents: "none" }}
         />
         <svg
@@ -124,7 +124,7 @@ export function SketchCard({
         />
         <foreignObject x={12} y={12} width={width - 24} height={height - 24}>
           <div
-            className="flex flex-col gap-2 p-2 text-left bg-[var(--theme-background)]"
+            className="flex flex-col gap-2 p-2 text-left bg-[var(--theme-card-bg)]"
             style={{
               color: "var(--theme-base)",
               fontFamily: "var(--font-sans), system-ui, sans-serif",

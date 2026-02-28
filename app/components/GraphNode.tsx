@@ -40,7 +40,7 @@ export function GraphNode({
     const g = circleRef.current;
     if (!g) return;
     g.innerHTML = "";
-    const rc = rough.svg(g);
+    const rc = rough.svg(g as unknown as SVGSVGElement);
     const node = rc.circle(0, 0, radius * 2, {
       stroke: "var(--theme-pencil-light)",
       strokeWidth: 0.8,

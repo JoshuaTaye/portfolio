@@ -48,8 +48,8 @@ export function SectionNode({
   return (
     <motion.section
       id={id}
-      className={`relative overflow-hidden rounded-sm bg-[var(--theme-background)] ${className}`}
-      style={{ width, minHeight: height }}
+      className={`relative overflow-hidden rounded-sm bg-[var(--theme-card-bg)] ${className}`}
+      style={{ width, height }}
       initial="rest"
       whileHover="hover"
       animate={reducedMotion ? {} : hovered ? { y: 0 } : { y: [0, 6, 0] }}

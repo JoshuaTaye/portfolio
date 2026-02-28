@@ -55,7 +55,7 @@ export function SketchEdge({
     const g = roughRef.current;
     if (!g) return;
     g.innerHTML = "";
-    const rc = rough.svg(g);
+    const rc = rough.svg(g as unknown as SVGSVGElement);
     const opts = {
       stroke: "var(--theme-pencil-light)",
       strokeWidth: 0.6,

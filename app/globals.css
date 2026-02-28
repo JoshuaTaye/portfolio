@@ -1,10 +1,15 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", sans-serif;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
   /* Portfolio theme — pencil/minimal aesthetic */
   --theme-background: #ffffff;
+  --theme-card-bg: #ffffff;
   --theme-base: #1a1a1a;
   --theme-base-muted: #6b6b6b;
   --theme-accent: #7d9a8a;
@@ -22,6 +27,7 @@
   --background: #000000;
   --foreground: #e8e8e8;
   --theme-background: #000000;
+  --theme-card-bg: #0c0c0c;
   --theme-base: #e8e8e8;
   --theme-base-muted: #a8a8a8;
   --theme-accent: #8faa9b;
@@ -33,10 +39,15 @@
   --theme-card-shadow-hover: drop-shadow(0 0 24px rgba(143, 170, 155, 0.15));
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Canvas pan: hand cursor when moving the canvas */
@@ -64,20 +75,31 @@ body {
 }
 
 
-/* Canvas pan: hand cursor when moving the canvas */
-.react-transform-wrapper {
-  cursor: grab;
-}
-.react-transform-wrapper:active {
-  cursor: grabbing;
-}
-
-
 /* Global transitions for theme variables */
 * {
-  transition-property: background-color, border-color, color, fill, stroke, filter, --theme-background, --theme-base, --theme-base-muted, --theme-pencil, --theme-pencil-light;
+  transition-property: background-color, border-color, color, fill, stroke, filter, --theme-background, --theme-card-bg, --theme-base, --theme-base-muted, --theme-pencil, --theme-pencil-light;
   transition-duration: 0.8s;
   transition-timing-function: ease;
+}
+
+/* Tech marquee: infinite vertical scroll, bottom to top */
+.tech-marquee-track {
+  animation: techMarqueeScroll 45s linear infinite !important;
+  transition: none !important;
+  will-change: transform;
+}
+
+.tech-marquee-track:hover {
+  animation-play-state: paused !important;
+}
+
+@keyframes techMarqueeScroll {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(calc(-1 * var(--marquee-shift, 50%)));
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -87,5 +109,9 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .tech-marquee-track {
+    animation: none !important;
   }
 }

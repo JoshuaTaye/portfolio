@@ -80,7 +80,7 @@ export function SketchButtonNode({
           width={width - 4}
           height={height - 4}
           rx={1}
-          fill="var(--theme-background)"
+          fill="var(--theme-card-bg)"
           style={{ pointerEvents: "none" }}
         />
         <svg

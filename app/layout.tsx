@@ -1,20 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { TechMarquee } from "@/app/components/TechMarquee";
 
 export const metadata: Metadata = {
-  title: "Full-Stack Developer | Portfolio",
-  description: "Portfolio of a full-stack developer — design systems, APIs, and interfaces.",
+  title: "Joshua T. Alemayehu — Full-Stack Developer",
+  description:
+    "Full-stack developer portfolio — production systems, type-safe APIs, and performant interfaces. Next.js, TypeScript, Spring Boot, PostgreSQL.",
 };
 
 export default function RootLayout({
@@ -23,10 +14,28 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
-      >
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+(function() {
+  var stored = localStorage.getItem('theme');
+  var dark = stored === 'dark' || (!stored && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  if (dark) {
+    document.documentElement.classList.add('dark');
+    document.documentElement.setAttribute('data-theme', 'dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+    document.documentElement.removeAttribute('data-theme');
+  }
+})();
+`,
+          }}
+        />
+      </head>
+      <body className="relative font-sans antialiased">
+        <TechMarquee />
         {children}
       </body>
     </html>

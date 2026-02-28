@@ -22,7 +22,7 @@ export const graphNodes: Record<string, GraphNodeData> = {
   intro: {
     id: "intro",
     label: "Joshua T. Alemayehu",
-    description: "Full-stack developer — design systems, APIs, and interfaces.",
+    description: "Full-stack developer — production systems, type-safe APIs, and performant interfaces.",
   },
   projects: {
     id: "projects",
@@ -34,13 +34,25 @@ export const graphNodes: Record<string, GraphNodeData> = {
     id: "about",
     label: "About",
     parentId: "",
-    children: ["bio", "experience", "skills"],
+    children: ["bio", "experience"],
+  },
+  skills: {
+    id: "skills",
+    label: "Skills",
+    parentId: "",
+    children: ["skill-frontend", "skill-backend", "skill-devops", "skill-practices"],
+  },
+  metrics: {
+    id: "metrics",
+    label: "Metrics",
+    parentId: "",
+    children: [],
   },
   contact: {
     id: "contact",
     label: "Contact",
     parentId: "",
-    children: ["inquiry", "email", "github", "linkedin"],
+    children: ["inquiry"],
   },
   inquiry: {
     id: "inquiry",
@@ -166,49 +178,44 @@ export const graphNodes: Record<string, GraphNodeData> = {
     id: "bio",
     label: "Bio",
     parentId: "about",
-    description: "Focused on clear architecture, thoughtful UX, and maintainable code.",
+    description: "3+ years building production apps — clean architecture, type-safe APIs, and interfaces that ship.",
     children: [],
   },
   experience: {
     id: "experience",
     label: "Experience",
     parentId: "about",
-    description: "APIs, data modeling, responsive interfaces, design systems.",
+    description: "Freelance full-stack, Lead Frontend at Go Gerami, community platform development.",
     children: [],
   },
-  skills: {
-    id: "skills",
-    label: "Skills",
-    parentId: "about",
-    children: ["frontend", "backend", "tools"],
-  },
-  frontend: {
-    id: "frontend",
+  "skill-frontend": {
+    id: "skill-frontend",
     label: "Frontend",
     parentId: "skills",
-    description: "React, TypeScript, design systems.",
-    tags: ["React", "TypeScript", "Tailwind"],
+    description: "React, Angular, Next.js, TypeScript, Tailwind CSS, Framer Motion",
     children: [],
   },
-  backend: {
-    id: "backend",
+  "skill-backend": {
+    id: "skill-backend",
     label: "Backend",
     parentId: "skills",
-    description: "APIs, databases, services.",
-    tags: ["Node.js", "PostgreSQL", "GraphQL"],
+    description: "Node.js, Spring Boot, PostgreSQL, MongoDB, GraphQL, REST APIs, Prisma",
     children: [],
   },
-  tools: {
-    id: "tools",
-    label: "Tools",
+  "skill-devops": {
+    id: "skill-devops",
+    label: "DevOps & Tools",
     parentId: "skills",
-    description: "Build, test, deploy.",
-    tags: ["Next.js", "Vercel", "Figma"],
+    description: "Docker, GitHub Actions, Vercel, Linux, Nginx, CI/CD",
     children: [],
   },
-  email: { id: "email", label: "Email", parentId: "contact", description: "tayejoshua4@gmail.com", children: [] },
-  github: { id: "github", label: "GitHub", parentId: "contact", description: "github.com", children: [] },
-  linkedin: { id: "linkedin", label: "LinkedIn", parentId: "contact", description: "linkedin.com", children: [] },
+  "skill-practices": {
+    id: "skill-practices",
+    label: "Practices",
+    parentId: "skills",
+    description: "System Design, Testing, Accessibility, Performance Optimization, Agile",
+    children: [],
+  },
 };
 
 export function getChildrenIds(nodeId: string): string[] {
@@ -225,7 +232,7 @@ export function getPathToNode(nodeId: string): string[] {
   let id: string | undefined = nodeId;
   while (id) {
     path.unshift(id);
-    const node = graphNodes[id];
+    const node: GraphNodeData | undefined = graphNodes[id];
     id = node?.parentId && node.parentId !== "" ? node.parentId : undefined;
   }
   return path;
