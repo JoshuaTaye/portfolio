@@ -102,7 +102,7 @@ export function SkillsList({ x, y, width = LIST_W, darkMode = false }: SkillsLis
         >
           {skillCategories.map((cat) => (
             <motion.div key={cat.id} variants={itemVariants}>
-              <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--theme-accent)]">
+              <h4 className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-[var(--theme-accent)]">
                 {cat.label}
               </h4>
               <div className="flex flex-wrap gap-1.5">

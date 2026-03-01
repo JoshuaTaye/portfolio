@@ -34,9 +34,16 @@ type TransformWrapperProps = {
   minScale?: number;
   maxScale?: number;
   centerOnInit?: boolean;
+  centerZoomedOut?: boolean;
   limitToBounds?: boolean;
   panning?: { velocityDisabled?: boolean };
   doubleClick?: { mode?: "reset" | "zoomIn" | "zoomOut" | "toggle"; disabled?: boolean };
+  wheel?: { step?: number; smoothStep?: number };
+  pinch?: { step?: number };
+  alignmentAnimation?: { disabled?: boolean };
+  onPinching?: (...args: any[]) => void;
+  onPinchingStop?: (...args: any[]) => void;
+  onWheelStop?: (...args: any[]) => void;
 };
 
 type TransformComponentProps = {
@@ -55,8 +62,8 @@ const TransformComponent = dynamic<TransformComponentProps>(
   { ssr: false }
 ) as React.ComponentType<TransformComponentProps>;
 
-/** Very large canvas so panning feels infinite and outermost cards are never cut. */
-const CANVAS_SIZE = 12000;
+/** Canvas sized to comfortably contain all root sections + expanded children. */
+const CANVAS_SIZE = 4000;
 const CANVAS_WIDTH = CANVAS_SIZE;
 const CANVAS_HEIGHT = CANVAS_SIZE;
 
@@ -116,6 +123,7 @@ export function Canvas() {
   const [inquirySubmitting, setInquirySubmitting] = useState(false);
   const [inquirySuccess, setInquirySuccess] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const centerTargetRef = useRef({ x: CX, y: CY });
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 768px)");
@@ -184,6 +192,57 @@ export function Canvas() {
 
   const positions = getCardPositions(expandedPath, ROOT_CENTERS);
 
+  useEffect(() => {
+    if (expandedPath.length > 0) {
+      const rootId = expandedPath[0];
+      const pos = positions.get(rootId);
+      if (pos) {
+        centerTargetRef.current = pos;
+        return;
+      }
+    }
+    centerTargetRef.current = { x: CX, y: CY };
+  }, [expandedPath, positions]);
+
+  const centerOnTarget = useCallback(
+    (ref: any, animationTime: number) => {
+      const container = containerRef.current;
+      if (!container) return;
+      const { scale } = ref.state;
+      const target = centerTargetRef.current;
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      const newX = w / 2 - target.x * scale;
+      const newY = h / 2 - target.y * scale;
+      ref.setTransform(newX, newY, scale, animationTime, animationTime ? "easeOutCubic" : undefined);
+    },
+    []
+  );
+
+  const handlePinching = useCallback(
+    (ref: any) => centerOnTarget(ref, 0),
+    [centerOnTarget]
+  );
+
+  const handlePinchStop = useCallback(
+    (ref: any) => centerOnTarget(ref, 300),
+    [centerOnTarget]
+  );
+
+  const handleWheelStop = useCallback((ref: any) => {
+    const container = containerRef.current;
+    if (!container) return;
+    const { scale, positionX, positionY } = ref.state;
+    const target = centerTargetRef.current;
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+    const screenX = positionX + target.x * scale;
+    const screenY = positionY + target.y * scale;
+    if (screenX >= 0 && screenX <= w && screenY >= 0 && screenY <= h) return;
+    const newX = w / 2 - target.x * scale;
+    const newY = h / 2 - target.y * scale;
+    ref.setTransform(newX, newY, scale, 300, "easeOutCubic");
+  }, []);
 
   if (!isDesktop) {
     return (
@@ -250,12 +309,19 @@ export function Canvas() {
 
       <TransformWrapper
         initialScale={0.85}
-        minScale={0.4}
+        minScale={0.75}
         maxScale={1.8}
         centerOnInit
+        centerZoomedOut
         limitToBounds={false}
+        alignmentAnimation={{ disabled: true }}
         panning={{ velocityDisabled: true }}
-        doubleClick={{ disabled: true }}
+        doubleClick={{ mode: "reset" }}
+        wheel={{ step: 0.13, smoothStep: 0.004 }}
+        pinch={{ step: 8 }}
+        onPinching={handlePinching}
+        onPinchingStop={handlePinchStop}
+        onWheelStop={handleWheelStop}
       >
         <PanToExpandedNode
           expandedPath={expandedPath}
@@ -346,7 +412,7 @@ export function Canvas() {
                           x1={skillsPos.x}
                           y1={skillsPos.y}
                           x2={skillsPos.x}
-                          y2={skillsPos.y + SKILLS_H / 2 + 160}
+                          y2={skillsPos.y + SKILLS_H / 2 + 220}
                           animate
                         />
                       )}
@@ -790,7 +856,7 @@ export function Canvas() {
                 {expandedPath[0] === "skills" && (
                   <SkillsList
                     x={SKILLS_W / 2 - 150}
-                    y={SKILLS_H + 24}
+                    y={SKILLS_H + 80}
                     width={300}
                     darkMode={darkMode}
                   />
