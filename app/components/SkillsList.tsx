@@ -36,7 +36,7 @@ const itemVariants = {
   },
 };
 
-export function SkillsList({ x, y, width = LIST_W, darkMode = false }: SkillsListProps) {
+export function SkillsList({ x, y, width = LIST_W}: SkillsListProps) {
   const borderRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const height = useRef(0);

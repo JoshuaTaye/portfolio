@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback, useId } from "react";
+import React, { useRef, useEffect, useState, useCallback, useId } from "react";
 import dynamic from "next/dynamic";
 import { useTransformContext } from "react-zoom-pan-pinch";
 import rough from "roughjs";
@@ -261,8 +261,6 @@ export function Canvas() {
     width: CANVAS_WIDTH,
     height: CANVAS_HEIGHT,
     position: "relative" as const,
-    // We remove the background here because the outer div handles the global background color
-    // and the "ripple" effect handles the transition.
   };
 
   const toggleTheme = async () => {
@@ -274,8 +272,6 @@ export function Canvas() {
       return;
     }
 
-    // Coordinates of the theme toggle button (top-right)
-    // Approx center: right-4 (1rem=16px) + half button (20px) = 36px from right logic
     const x = window.innerWidth - 36;
     const y = 36;
     const endRadius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
@@ -286,7 +282,6 @@ export function Canvas() {
 
     await transition.ready;
 
-    // Animate the clip-path of the NEW view
     document.documentElement.animate(
       {
         clipPath: [
@@ -331,9 +326,7 @@ export function Canvas() {
         />
         <TransformComponent wrapperStyle={{ width: "100%", height: "100%", cursor: "grab" }} contentStyle={contentStyle}>
           <div className="relative canvas-grab" style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }}>
-            {/* Grid texture — fainter overall, more visible near nodes, fades to background away */}
             <CanvasTexture darkMode={darkMode} positions={positions} />
-            {/* Edges: parent → children for each node in expanded path */}
             <svg
               className="absolute inset-0"
               width={CANVAS_WIDTH}
@@ -678,14 +671,14 @@ export function Canvas() {
                 <div className="flex h-full flex-col justify-center">
                   <h1
                     className={`text-4xl font-bold tracking-tight transition-colors duration-500 ${
-                      introHovered ? "text-white drop-shadow-md" : "text-[var(--theme-base)]"
+                      introHovered ? "text-white drop-shadow-md" : "text-(--theme-base)"
                     }`}
                   >
                     Joshua T. Alemayehu
                   </h1>
                   <p
                     className={`mt-4 text-lg transition-colors duration-500 ${
-                      introHovered ? "text-white/90 drop-shadow-md" : "text-[var(--theme-base-muted)]"
+                      introHovered ? "text-white/90 drop-shadow-md" : "text-(--theme-base-muted)"
                     }`}
                   >
                     Full-stack developer — production systems, type-safe APIs, and performant interfaces.
@@ -696,7 +689,7 @@ export function Canvas() {
                     className={`mt-5 inline-flex w-fit items-center gap-2 border px-4 py-2 text-sm font-medium transition-colors duration-300 ${
                       introHovered
                         ? "border-white/40 text-white hover:border-white hover:bg-white/10"
-                        : "border-[var(--theme-pencil-light)] text-[var(--theme-base)] hover:border-[var(--theme-accent)] hover:text-[var(--theme-accent)]"
+                        : "border-(--theme-pencil-light) text-(--theme-base) hover:border-(--theme-accent) hover:text-(--theme-accent)"
                     }`}
                     onClick={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
@@ -933,7 +926,14 @@ function PanToExpandedNode({
 
     const targetPos = positions.get(activeId);
     const container = containerRef.current;
-    const ref = ctx?.getContext?.();
+    let ref: ReturnType<NonNullable<typeof ctx>["getContext"]> | null = null;
+    try {
+      ref = ctx?.getContext?.() ?? null;
+    } catch {
+      // react-zoom-pan-pinch can throw when wrapper/component refs are not mounted yet.
+      // Ignore this frame; next effect tick will re-run once mounted.
+      return;
+    }
     if (!targetPos || !container || !ref?.setTransform) return;
     const scale = ctx.transformState?.scale ?? 0.85;
     const w = container.clientWidth;
