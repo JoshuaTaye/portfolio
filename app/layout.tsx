@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { TechMarquee } from "@/app/components/TechMarquee";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "Joshua T. Alemayehu — Full-Stack Developer",
@@ -37,6 +38,7 @@ export default function RootLayout({
       <body className="relative font-sans antialiased">
         <TechMarquee />
         {children}
+        <Analytics />
       </body>
     </html>
   );
