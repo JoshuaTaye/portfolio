@@ -1,22 +1,22 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback, useId } from "react";
+import React, { useRef, useEffect, useState, useCallback, useId } from "react";
 import {
   TransformWrapper,
   TransformComponent,
   useTransformContext,
 } from "react-zoom-pan-pinch";
 import rough from "roughjs";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useInView } from "framer-motion";
 import { SectionNode } from "./SectionNode";
-import { ProjectCard } from "./ProjectCard";
-import { SketchLine } from "./SketchDivider";
 import { SketchEdge } from "./SketchEdge";
 import { SketchCard } from "./SketchCard";
 import { SketchFieldNode } from "./SketchFieldNode";
 import { SketchButtonNode } from "./SketchButtonNode";
 import { ThemeToggle } from "./ThemeToggle";
-import { projects, aboutText, contact } from "@/app/lib/seed-data";
+import { SocialIcon, isSocialIcon } from "./SocialIcons";
+import { ProjectModal } from "./ProjectModal";
+import { projects, aboutText, contact, type Project } from "@/app/lib/seed-data";
 import { getChildrenIds, getNode, getPathToNode } from "@/app/lib/graph-data";
 import { getCardPositions, LAYOUT } from "@/app/lib/canvas-layout";
 import { theme } from "@/app/lib/theme";
@@ -71,6 +71,7 @@ export function Canvas() {
   const [inquiryDescription, setInquiryDescription] = useState("");
   const [inquirySubmitting, setInquirySubmitting] = useState(false);
   const [inquirySuccess, setInquirySuccess] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 768px)");
@@ -129,7 +130,15 @@ export function Canvas() {
   }
 
   if (!isDesktop) {
-    return <CanvasScrollFallback darkMode={darkMode} setDarkMode={setDarkMode} />;
+    return (
+      <CanvasScrollFallback
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+        selectedProject={selectedProject}
+        onCloseProject={() => setSelectedProject(null)}
+        onSelectProject={setSelectedProject}
+      />
+    );
   }
 
 
@@ -180,7 +189,7 @@ export function Canvas() {
 
   return (
     <div ref={containerRef} className="relative h-screen w-full overflow-hidden bg-[var(--theme-background)]">
-      
+      <ProjectModal project={selectedProject} onClose={() => setSelectedProject(null)} />
       <ThemeToggle darkMode={darkMode} toggle={toggleTheme} />
 
       <TransformWrapper
@@ -298,7 +307,7 @@ export function Canvas() {
                         delay: i * 0.06,
                       }}
                       style={{
-                        cursor: hasChildren || isInquiryTrigger ? "pointer" : "default",
+                        cursor: hasChildren || isInquiryTrigger || node.project ? "pointer" : "default",
                         pointerEvents: "auto",
                       }}
                       onMouseEnter={() => setHoveredCardId(childId)}
@@ -312,6 +321,11 @@ export function Canvas() {
                           setInquiryFormOpen(true);
                           return;
                         }
+                        if (node.project) {
+                          e.stopPropagation();
+                          setSelectedProject(node.project);
+                          return;
+                        }
                         if (hasChildren) {
                           e.stopPropagation();
                           expandToCard(childId);
@@ -323,15 +337,26 @@ export function Canvas() {
                           setInquiryFormOpen(true);
                           return;
                         }
+                        if (node.project && (e.key === "Enter" || e.key === " ")) {
+                          e.preventDefault();
+                          setSelectedProject(node.project);
+                          return;
+                        }
                         if (hasChildren && (e.key === "Enter" || e.key === " ")) {
                           e.preventDefault();
                           expandToCard(childId);
                         }
                       }}
-                      role={hasChildren || isInquiryTrigger ? "button" : undefined}
-                      tabIndex={hasChildren || isInquiryTrigger ? 0 : undefined}
+                      role={hasChildren || isInquiryTrigger || node.project ? "button" : undefined}
+                      tabIndex={hasChildren || isInquiryTrigger || node.project ? 0 : undefined}
                       aria-label={
-                        isInquiryTrigger ? "Open feedback form" : hasChildren ? `Expand ${node.label}` : node.label
+                        isInquiryTrigger
+                          ? "Open feedback form"
+                          : node.project
+                            ? `View ${node.label}`
+                            : hasChildren
+                              ? `Expand ${node.label}`
+                              : node.label
                       }
                     >
                       <SketchCard
@@ -765,65 +790,285 @@ function CanvasSketchLines({ darkMode }: { darkMode: boolean }) {
   );
 }
 
+function ScrollReveal({
+  children,
+  className = "",
+  delay = 0,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  delay?: number;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true, margin: "-60px" });
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 28 }}
+      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 28 }}
+      transition={{ duration: 0.55, ease: [0.25, 0.1, 0.25, 1], delay }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function NavDot({
+  targetId,
+  label,
+  active,
+}: {
+  targetId: string;
+  label: string;
+  active: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth" })}
+      className="group flex flex-col items-center gap-1"
+      aria-label={`Go to ${label}`}
+    >
+      <span
+        className={`block h-2 w-2 rounded-full border transition-all duration-300 ${
+          active
+            ? "scale-125 border-[var(--theme-accent)] bg-[var(--theme-accent)]"
+            : "border-[var(--theme-pencil-light)] bg-transparent group-hover:border-[var(--theme-accent)]"
+        }`}
+      />
+      <span
+        className={`text-[9px] font-medium uppercase tracking-widest transition-colors duration-300 ${
+          active ? "text-[var(--theme-accent)]" : "text-[var(--theme-pencil-light)]"
+        }`}
+      >
+        {label}
+      </span>
+    </button>
+  );
+}
+
 function CanvasScrollFallback({
   darkMode,
   setDarkMode,
+  selectedProject,
+  onCloseProject,
+  onSelectProject,
 }: {
   darkMode: boolean;
   setDarkMode: React.Dispatch<React.SetStateAction<boolean>>;
+  selectedProject: Project | null;
+  onCloseProject: () => void;
+  onSelectProject: (project: Project) => void;
 }) {
+  const [activeSection, setActiveSection] = useState("hero");
+  const [inquiryName, setInquiryName] = useState("");
+  const [inquiryEmail, setInquiryEmail] = useState("");
+  const [inquiryMessage, setInquiryMessage] = useState("");
+  const [inquirySubmitting, setInquirySubmitting] = useState(false);
+  const [inquirySuccess, setInquirySuccess] = useState(false);
+  const heroRef = useRef<HTMLElement>(null);
+  const projectsRef = useRef<HTMLElement>(null);
+  const aboutRef = useRef<HTMLElement>(null);
+  const contactRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        }
+      },
+      { threshold: 0.4 }
+    );
+
+    const targets = [heroRef.current, projectsRef.current, aboutRef.current, contactRef.current].filter(Boolean);
+    for (const target of targets) {
+      observer.observe(target as Element);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  const submitInquiry = async () => {
+    if (!inquiryName.trim() || !inquiryEmail.trim() || !inquiryMessage.trim()) return;
+    setInquirySubmitting(true);
+    try {
+      const res = await fetch("/api/inquiry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: inquiryName.trim(),
+          email: inquiryEmail.trim(),
+          description: inquiryMessage.trim(),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setInquirySuccess(true);
+        setInquiryName("");
+        setInquiryEmail("");
+        setInquiryMessage("");
+        setTimeout(() => setInquirySuccess(false), 2200);
+      } else {
+        alert(data.error ?? "Something went wrong.");
+      }
+    } catch {
+      alert("Failed to send. Please try again.");
+    } finally {
+      setInquirySubmitting(false);
+    }
+  };
+
   return (
-    <div className={`min-h-screen w-full overflow-y-auto px-4 py-8 ${darkMode ? "bg-black" : "bg-white"}`}>
-      <button
-        type="button"
-        onClick={() => setDarkMode((d: boolean) => !d)}
-        className="absolute top-4 right-4 z-50 rounded border border-[var(--theme-pencil-light)] bg-[var(--theme-background)] px-2 py-1 text-xs text-[var(--theme-base-muted)]"
-        aria-label={darkMode ? "Light mode" : "Dark mode"}
-      >
-        {darkMode ? "Light" : "Dark"}
-      </button>
-      <div className="mx-auto max-w-lg space-y-10">
-        <section id="intro" className="rounded-sm border border-[var(--theme-pencil-light)] bg-[var(--theme-background)] p-6">
-          <h1 className="font-serif text-2xl font-medium text-[var(--theme-base)]" style={{ fontFamily: "Georgia, serif" }}>
-            Joshua T. Alemayehu
-          </h1>
-          <p className="mt-2 text-sm text-[var(--theme-base-muted)]">
+    <div className="relative min-h-screen w-full overflow-x-hidden bg-[var(--theme-background)]">
+      <ProjectModal project={selectedProject} onClose={onCloseProject} />
+      <ThemeToggle darkMode={darkMode} toggle={() => setDarkMode((d) => !d)} />
+
+      <nav className="fixed right-3 top-1/2 z-50 flex -translate-y-1/2 flex-col gap-4" aria-label="Section navigation">
+        <NavDot targetId="hero" label="Top" active={activeSection === "hero"} />
+        <NavDot targetId="m-projects" label="Work" active={activeSection === "m-projects"} />
+        <NavDot targetId="m-about" label="About" active={activeSection === "m-about"} />
+        <NavDot targetId="m-contact" label="Contact" active={activeSection === "m-contact"} />
+      </nav>
+
+      <section ref={heroRef} id="hero" className="relative flex min-h-[100svh] flex-col items-center justify-center px-6 text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
+          className="flex flex-col items-center"
+        >
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 0.6, delay: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+            className="mb-6 h-px w-16 origin-left bg-[var(--theme-pencil-light)]"
+          />
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--theme-base)] sm:text-4xl">Joshua T. Alemayehu</h1>
+          <p className="mt-3 max-w-xs text-base leading-relaxed text-[var(--theme-base-muted)]">
             Full-stack developer — design systems, APIs, and interfaces.
           </p>
-        </section>
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 0.6, delay: 0.45, ease: [0.25, 0.1, 0.25, 1] }}
+            className="mt-6 h-px w-16 origin-right bg-[var(--theme-pencil-light)]"
+          />
 
-        <SketchLine direction="horizontal" length={320} className="mx-auto block" />
-
-        <section id="projects" className="rounded-sm border border-[var(--theme-pencil-light)] bg-[var(--theme-background)] p-6">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[var(--theme-base-muted)]">Projects</h2>
-          <div className="grid gap-3">
-            {projects.map((p) => (
-              <ProjectCard key={p.id} project={p} />
+          <div className="mt-9 flex items-center gap-5">
+            {contact.links.map(({ label, href }) => (
+              <a
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[var(--theme-pencil-light)] transition-colors duration-200 hover:text-[var(--theme-accent)] [&_svg]:h-5 [&_svg]:w-5"
+                aria-label={label}
+              >
+                {isSocialIcon(label) ? <SocialIcon label={label} /> : label}
+              </a>
             ))}
           </div>
-        </section>
+        </motion.div>
+      </section>
 
-        <section id="about" className="rounded-sm border border-[var(--theme-pencil-light)] bg-[var(--theme-background)] p-6">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[var(--theme-base-muted)]">About</h2>
-          <p className="text-sm leading-relaxed text-[var(--theme-base-muted)]">{aboutText}</p>
-        </section>
+      <section ref={projectsRef} id="m-projects" className="px-5 py-16 sm:px-8">
+        <ScrollReveal>
+          <h2 className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--theme-accent)]">Selected Work</h2>
+          <div className="mt-1 h-px w-8 bg-[var(--theme-accent)] opacity-40" />
+        </ScrollReveal>
+        <div className="mt-8 flex flex-col gap-5">
+          {projects.map((project, i) => (
+            <ScrollReveal key={project.id} delay={i * 0.08}>
+              <button
+                type="button"
+                onClick={() => onSelectProject(project)}
+                className="group relative w-full overflow-hidden border border-[var(--theme-pencil-light)] bg-[var(--theme-card-bg)] p-5 text-left transition-colors duration-300 active:scale-[0.98]"
+              >
+                <div className="pointer-events-none absolute inset-0 bg-[var(--theme-accent)] opacity-0 transition-opacity duration-300 group-active:opacity-[0.06]" />
+                {project.image && (
+                  <div className="mb-4 h-36 w-full overflow-hidden border border-[var(--theme-pencil-light)]/30">
+                    <img src={project.image} alt="" className="h-full w-full object-cover transition-transform duration-500 group-active:scale-105" />
+                  </div>
+                )}
+                <h3 className="text-lg font-semibold text-[var(--theme-base)]">{project.title}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-[var(--theme-base-muted)]">{project.description}</p>
+                <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Technologies">
+                  {project.tags.map((tag) => (
+                    <li key={tag} className="rounded border border-[var(--theme-pencil-light)] px-2 py-0.5 text-[11px] text-[var(--theme-base-muted)]">
+                      {tag}
+                    </li>
+                  ))}
+                </ul>
+              </button>
+            </ScrollReveal>
+          ))}
+        </div>
+      </section>
 
-        <section id="contact" className="rounded-sm border border-[var(--theme-pencil-light)] bg-[var(--theme-background)] p-6">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[var(--theme-base-muted)]">Contact</h2>
-          <a href={`mailto:${contact.email}`} className="text-sm font-medium text-[var(--theme-base)] underline">
+      <section ref={aboutRef} id="m-about" className="px-5 py-16 sm:px-8">
+        <ScrollReveal>
+          <h2 className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--theme-accent)]">About</h2>
+          <div className="mt-1 h-px w-8 bg-[var(--theme-accent)] opacity-40" />
+        </ScrollReveal>
+        <ScrollReveal delay={0.1}>
+          <p className="mt-6 text-sm leading-[1.8] text-[var(--theme-base-muted)]">{aboutText}</p>
+        </ScrollReveal>
+      </section>
+
+      <section ref={contactRef} id="m-contact" className="px-5 py-16 pb-24 sm:px-8">
+        <ScrollReveal>
+          <h2 className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--theme-accent)]">Get in Touch</h2>
+          <div className="mt-1 h-px w-8 bg-[var(--theme-accent)] opacity-40" />
+        </ScrollReveal>
+        <ScrollReveal delay={0.1}>
+          <a
+            href={`mailto:${contact.email}`}
+            className="mt-6 inline-block text-sm font-medium text-[var(--theme-base)] underline decoration-[var(--theme-pencil-light)] underline-offset-4 transition-colors hover:decoration-[var(--theme-accent)]"
+          >
             {contact.email}
           </a>
-          <ul className="mt-3 flex flex-wrap gap-3">
-            {contact.links.map(({ label, href }) => (
-              <li key={label}>
-                <a href={href} target="_blank" rel="noopener noreferrer" className="text-sm text-[var(--theme-base-muted)]">
-                  {label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
+        </ScrollReveal>
+        <ScrollReveal delay={0.2}>
+          <div className="mt-8 border border-[var(--theme-pencil-light)] bg-[var(--theme-card-bg)] p-5">
+            <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-wider text-[var(--theme-base-muted)]">Send a message</h3>
+            <div className="flex flex-col gap-3">
+              <input
+                type="text"
+                value={inquiryName}
+                onChange={(e) => setInquiryName(e.target.value)}
+                placeholder="Name"
+                className="w-full border border-[var(--theme-pencil-light)] bg-transparent px-3 py-2 text-sm text-[var(--theme-base)] placeholder:text-[var(--theme-pencil-light)] focus:border-[var(--theme-accent)] focus:outline-none"
+              />
+              <input
+                type="email"
+                value={inquiryEmail}
+                onChange={(e) => setInquiryEmail(e.target.value)}
+                placeholder="Email"
+                className="w-full border border-[var(--theme-pencil-light)] bg-transparent px-3 py-2 text-sm text-[var(--theme-base)] placeholder:text-[var(--theme-pencil-light)] focus:border-[var(--theme-accent)] focus:outline-none"
+              />
+              <textarea
+                rows={4}
+                value={inquiryMessage}
+                onChange={(e) => setInquiryMessage(e.target.value)}
+                placeholder="Your feedback or comment…"
+                className="w-full resize-none border border-[var(--theme-pencil-light)] bg-transparent px-3 py-2 text-sm text-[var(--theme-base)] placeholder:text-[var(--theme-pencil-light)] focus:border-[var(--theme-accent)] focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={submitInquiry}
+                disabled={inquirySubmitting || inquirySuccess}
+                className="mt-1 w-full border border-[var(--theme-pencil-light)] bg-transparent py-2.5 text-sm font-semibold text-[var(--theme-base)] transition-all duration-200 hover:border-[var(--theme-accent)] hover:text-[var(--theme-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--theme-accent)] disabled:opacity-50"
+              >
+                {inquirySuccess ? "Sent ✓" : inquirySubmitting ? "Sending..." : "Submit"}
+              </button>
+            </div>
+          </div>
+        </ScrollReveal>
+      </section>
     </div>
   );
 }
