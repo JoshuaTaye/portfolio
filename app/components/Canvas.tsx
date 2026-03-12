@@ -658,7 +658,7 @@ export function Canvas() {
   );
 }
 
-/** Pans viewport to the active (expanded) node whenever the user taps a section or expands a card. */
+/** Pans viewport to the active and (expanded) node whenever the user taps a section or expands a card. */
 function PanToExpandedNode({
   expandedPath,
   positions,
