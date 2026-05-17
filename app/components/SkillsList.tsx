@@ -109,7 +109,7 @@ export function SkillsList({ x, y, width = LIST_W}: SkillsListProps) {
                 {cat.items.map((item) => (
                   <span
                     key={item}
-                    className="rounded border border-[var(--theme-pencil-light)] px-1.5 py-0.5 text-[10px] text-[var(--theme-base-muted)] transition-colors duration-200 hover:border-[var(--theme-accent)] hover:text-[var(--theme-base)]"
+                    className="rounded border  border-(--theme-pencil-light) px-1.5 py-0.5 text-[10px] text-[var(--theme-base-muted)] transition-colors duration-200 hover:border-[var(--theme-accent)] hover:text-[var(--theme-base)]"
                   >
                     {item}
                   </span>
