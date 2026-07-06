@@ -7,6 +7,8 @@ export type Project = {
   id: string;
   title: string;
   description: string;
+  /** Longer narrative shown in the project modal, beneath the tagline. */
+  overview?: string;
   tags: string[];
   href: string;
   image?: string;
@@ -22,126 +24,158 @@ export type Project = {
 export const projects: Project[] = [
   {
     id: "1",
-    title: "BSIS",
+    title: "goGerami",
     description:
-      "Business and student information system with real-time enrollment tracking, grade management, and automated report generation serving educational institutions.",
-    tags: ["Next.js", "TypeScript", "PostgreSQL", "Prisma", "REST API"],
-    href: "#",
+      "Multi-vendor gift marketplace connecting the Ethiopian diaspora to local vendors — browse gifts, events, and services, checkout in USD or ETB, and track delivery.",
+    overview:
+      "goGerami (formerly Zembil) is a full-stack marketplace built for the Ethiopian diaspora who want to send meaningful gifts, book event tickets, and support local vendors back home. The platform pairs a Spring Boot REST API with a React and TypeScript client, handling everything from product discovery and cart management to vendor payouts and delivery logistics. I worked across the stack — designing the multi-currency payment abstraction (Stripe for USD, Chapa and Telebirr for ETB), building the vendor onboarding and commission system, and shipping the event ticketing and custom-order workflows that let customers request bespoke gifts.",
+    tags: ["Java", "Spring Boot", "React", "TypeScript", "PostgreSQL", "Stripe", "Chapa"],
+    href: "https://go-zembil-frontend.vercel.app",
     image: "/gogerami.png",
-    links: [
-      { label: "Live demo", href: "#" },
-      { label: "Repo", href: "#" },
-    ],
-    gallery: ["/gogerami.png", "/vendor.png"],
+    links: [{ label: "Live app", href: "https://go-zembil-frontend.vercel.app" }],
     role: "Full-Stack Developer",
     challenge:
-      "Educational institutions managed student records across disconnected spreadsheets and legacy systems, causing data inconsistencies and delayed reporting.",
+      "Diaspora customers needed a reliable way to send gifts, book events, and pay local vendors across currencies and payment rails (Stripe, Chapa, Telebirr), while vendors needed tools to manage products, events, and payouts.",
     solution:
-      "Built a unified platform with role-based dashboards, automated grade calculation, and real-time enrollment tracking. Implemented optimistic UI updates and server-side pagination for large datasets.",
-    metrics: [
-      { label: "Data Processing", value: "60% faster" },
-      { label: "Records Managed", value: "10K+" },
-      { label: "Report Generation", value: "< 2s" },
-      { label: "Uptime", value: "99.8%" },
-    ],
+      "Built a Spring Boot API and React/TypeScript client covering catalog, cart, multi-currency checkout, vendor onboarding and payouts, event ticketing, custom orders, and an admin dashboard for platform operations.",
     highlights: [
-      "Role-based access control for admins, teachers, and students",
-      "Automated PDF report generation with server actions",
-      "Real-time enrollment dashboard with WebSocket updates",
+      "Multi-vendor marketplace with onboarding, payouts, and commission handling",
+      "Multi-currency checkout via Stripe, Chapa, and Telebirr",
+      "Event ticketing, custom orders, and delivery assignment workflows",
+      "JWT + OAuth2 authentication with role-based admin access",
+      "Admin dashboard for platform-wide analytics, tax zones, and delivery management",
     ],
   },
   {
     id: "2",
-    title: "Go Gerami",
+    title: "Bilal Community Platform",
     description:
-      "Ride-hailing and delivery platform connecting drivers and riders with real-time GPS tracking, fare estimation, and in-app payments.",
-    tags: ["React", "Node.js", "MongoDB", "Socket.io", "Tailwind"],
-    href: "#",
+      "Community membership platform for an Australian Muslim organization — manage memberships, events, donations, and fundraising campaigns with Stripe-powered payments.",
+    overview:
+      "Bilal Community Platform is the operational backbone for an Australian Muslim community organization, replacing spreadsheets and manual processes with a proper membership system. Members register, verify via OTP, and pay recurring dues through Stripe; admins manage events, track donations, and run fundraising campaigns from a single dashboard. I built the Spring Boot API end-to-end — the OTP authentication flow, Liquibase-managed schema, Stripe billing integration with automated grace-period reminders, and the role-based permission system that powers the admin and member portals.",
+    tags: ["Java", "Spring Boot", "PostgreSQL", "Liquibase", "Stripe", "Twilio"],
+    href: "https://bilalcommunity.com.au",
     image: "/gogerami.png",
     links: [
-      { label: "Live app", href: "#" },
-      { label: "Case study", href: "#" },
+      { label: "Live site", href: "https://bilalcommunity.com.au" },
+      { label: "API", href: "https://api.bilalcommunity.com.au" },
     ],
-    gallery: ["/gogerami.png", "/portrait.jpg"],
-    role: "Lead Frontend Developer",
+    role: "Full-Stack Developer",
     challenge:
-      "Existing ride-hailing solutions lacked localization and reliable GPS tracking in areas with intermittent connectivity.",
+      "A growing community organization relied on manual processes for member registration, event coordination, and financial tracking — resulting in low engagement and poor transparency across membership tiers.",
     solution:
-      "Developed a progressive web app with offline-first architecture, optimistic location updates, and a fallback SMS-based dispatch system for low-connectivity zones.",
-    metrics: [
-      { label: "Active Users", value: "2K+" },
-      { label: "Avg. Response", value: "< 200ms" },
-      { label: "GPS Accuracy", value: "95%+" },
-      { label: "Offline Cache", value: "30s" },
-    ],
+      "Built a Spring Boot API with OTP-based auth, Stripe membership checkout, event ticketing with check-in, recurring donations, fundraising campaigns, and a CMS for news and community content.",
     highlights: [
-      "Real-time driver tracking with WebSocket and GPS interpolation",
-      "Offline-first PWA with service worker caching",
-      "Fare estimation engine with surge pricing logic",
+      "OTP-based dual-channel auth (email + SMS) with JWT refresh token rotation",
+      "Stripe integration for memberships, donations, and recurring giving",
+      "Event ticketing with admin check-in and member/guest registration",
+      "DB-driven RBAC with configurable membership payment grace periods",
+      "Automated child-aging and discount-expiry scheduled jobs",
     ],
   },
   {
     id: "3",
-    title: "Bilal Community",
+    title: "BSIS",
     description:
-      "Community engagement platform with event management, member directories, and donation tracking for religious organizations.",
-    tags: ["Angular", "Spring Boot", "PostgreSQL", "JWT", "D3.js"],
-    href: "#",
+      "Blood Safety Information System tracking donated blood from collection through testing, storage, and transfusion — replacing paper-based workflows at blood banks in developing countries.",
+    overview:
+      "BSIS (Blood Safety Information System) is a healthcare platform that tracks blood from the moment it's donated through testing, processing, and transfusion at hospitals — originally built for blood banks in developing countries with unreliable connectivity. I contributed to the backend split between a dedicated OAuth2 identity server and a core API that models the full donation lifecycle: donor eligibility, component processing, TTI testing, inventory, and transfusion requests. The system uses multi-tenant PostgreSQL schemas, RabbitMQ-driven analytics events, and Hibernate Envers for a complete audit trail — production-grade requirements for a system handling sensitive medical data.",
+    tags: ["Java", "Spring Boot", "OAuth2", "PostgreSQL", "RabbitMQ", "Liquibase"],
+    href: "",
     image: "/gogerami.png",
-    links: [{ label: "View project", href: "#" }],
-    gallery: ["/gogerami.png"],
-    role: "Full-Stack Developer",
+    role: "Backend Developer",
     challenge:
-      "Community organizations relied on manual processes for member management, event coordination, and financial tracking — resulting in low engagement and poor transparency.",
+      "Blood banks in low-connectivity regions managed donations, testing, and inventory on paper — causing data loss, delayed reporting, and no audit trail across the donation-to-transfusion lifecycle.",
     solution:
-      "Built a platform with automated event reminders, transparent donation dashboards using D3.js visualizations, and a searchable member directory.",
-    metrics: [
-      { label: "Member Engagement", value: "+40%" },
-      { label: "Event Attendance", value: "+55%" },
-      { label: "Donation Tracking", value: "100% digital" },
-      { label: "Load Time", value: "< 1.5s" },
-    ],
+      "Contributed to a split microservice architecture with an OAuth2 identity server and a core blood-bank API covering donations, component processing, testing, inventory, transfusions, and analytics fed by RabbitMQ domain events.",
     highlights: [
-      "Interactive analytics dashboard with D3.js",
-      "JWT-based authentication with role hierarchies",
-      "Automated email notifications via Spring Boot scheduling",
+      "OAuth2 authorization server with PKCE for web and mobile clients",
+      "Multi-tenant PostgreSQL with schema-per-tenant connection routing",
+      "Full donation-to-transfusion lifecycle with ISBT-128 labeling",
+      "Event-driven analytics via RabbitMQ and Hibernate Envers audit trail",
+      "Hospital/usage-site interface for transfusion requests and blood inventory",
     ],
   },
   {
     id: "4",
-    title: "PIMS",
+    title: "Fund-ly",
     description:
-      "Project information management system for tracking deliverables, budgets, and team workloads across multiple concurrent projects.",
-    tags: ["Next.js", "TypeScript", "PostgreSQL", "GraphQL", "Docker"],
-    href: "#",
+      "AI-driven crowd investment platform connecting entrepreneurs and investors — project submission, KYC verification, milestone-based funding, and real-time collaboration.",
+    overview:
+      "Fund-ly is an AI-assisted crowd-investment platform that connects entrepreneurs raising capital with investors looking to fund early-stage ventures. Entrepreneurs submit projects with milestones and documentation, investors get AI-generated credibility scores and personalized recommendations, and both sides negotiate through NDAs, pledges, and a real-time chat before funds move via Chapa. I worked on the backend's verification pipeline (OCR, face match, and liveness checks for KYC), the milestone-based funding engine, and the WebSocket chat that lets investors and entrepreneurs communicate directly inside the platform.",
+    tags: ["Java", "Spring Boot", "PostgreSQL", "JWT", "WebSocket", "Chapa"],
+    href: "https://fund-ly.app",
     image: "/gogerami.png",
     links: [
-      { label: "Docs", href: "#" },
-      { label: "API", href: "#" },
+      { label: "Live app", href: "https://fund-ly.app" },
+      {
+        label: "Repo",
+        href: "https://github.com/Crowd-Investment-Platform/Backend",
+      },
     ],
-    gallery: ["/gogerami.png", "/portrait.jpg", "/gogerami.png"],
-    role: "Backend & API Developer",
+    role: "Backend Developer",
     challenge:
-      "Project managers lacked a unified view of deliverables, budgets, and team capacity across concurrent projects, causing resource conflicts and missed deadlines.",
+      "Entrepreneurs in emerging markets lacked a trusted platform to raise capital with proper investor verification, legal agreements, and milestone-based fund disbursement.",
     solution:
-      "Designed a GraphQL API with fine-grained authorization, real-time status updates via subscriptions, and a Gantt-style timeline view for cross-project visibility.",
-    metrics: [
-      { label: "API Response", value: "< 150ms p95" },
-      { label: "Projects Tracked", value: "50+" },
-      { label: "Deployment", value: "CI/CD" },
-      { label: "Query Efficiency", value: "3x fewer" },
-    ],
+      "Built a Spring Boot monolith with entrepreneur/investor verification pipelines (OCR, face match, liveness), Chapa payment integration, AI-powered credibility scoring, NDAs, milestone automation, and WebSocket chat.",
     highlights: [
-      "GraphQL API with DataLoader for N+1 query prevention",
-      "Dockerized deployment with GitHub Actions CI/CD",
-      "Real-time updates via GraphQL subscriptions",
+      "KYC verification pipeline with OCR, face match, and liveness detection",
+      "Chapa payment gateway with entrepreneur subaccount onboarding",
+      "AI credibility scoring and pgvector-backed investor recommendations",
+      "Real-time investor-entrepreneur chat via WebSocket",
+      "Google OAuth2 login plus JWT refresh-token authentication",
+    ],
+  },
+  {
+    id: "5",
+    title: "ECP Registration Bot",
+    description:
+      "Telegram bot automating course registration for Ethio College Prep — collects student info, validates discount codes, uploads payment receipts, and issues one-time group invite links.",
+    overview:
+      "The ECP Registration Bot automates course enrollment for Ethio College Prep entirely inside Telegram, replacing a manual, spreadsheet-driven signup process. Prospective students chat with the bot to submit their details, apply an ambassador discount code, upload a payment receipt, and instantly receive a one-time invite link to the correct course group — whether that's an online cohort or an in-person location like Bole or BITS College. I built the full conversational state machine with Telegraf, wired up Cloudinary for receipt storage, and set up the Express webhook server used in production.",
+    tags: ["Node.js", "Telegraf", "Express", "MongoDB", "Cloudinary"],
+    href: "",
+    image: "/gogerami.png",
+    role: "Backend Developer",
+    challenge:
+      "A college prep company processed hundreds of course registrations manually via spreadsheets and messaging — slow, error-prone, and unable to validate ambassador discount codes or payment receipts at scale.",
+    solution:
+      "Built a Telegraf-powered Telegram bot with a multi-step registration state machine, Cloudinary receipt uploads, ambassador discount validation, and automated one-time invite link generation per course location.",
+    highlights: [
+      "Multi-step conversational registration flow via Telegram",
+      "Ambassador discount code validation across 80+ codes",
+      "Payment receipt upload and storage via Cloudinary",
+      "Automated one-time Telegram group invite links per location",
+      "Express webhook server for production-grade Telegram delivery",
+    ],
+  },
+  {
+    id: "6",
+    title: "Ethio College Prep Web",
+    description:
+      "Marketing and enrollment website for Ethio College Prep — SAT, IELTS, and college counseling programs with course pages, blog, and an admin CMS for content management.",
+    overview:
+      "The Ethio College Prep website is the public face of the company's SAT, IELTS, and college counseling programs — course pages, a blog, and online registration all built on Next.js. Behind the scenes, an admin CMS protected with NextAuth lets non-technical staff manage tutors, testimonials, FAQs, and scholarship announcements without touching code. I built the registration API routes backed by MongoDB, the admin authentication flow, and the Cloudinary-powered media pipeline used across the course and blog pages.",
+    tags: ["Next.js", "TypeScript", "MongoDB", "NextAuth", "Tailwind"],
+    href: "https://www.ethiocollegeprep.com",
+    image: "/gogerami.png",
+    links: [{ label: "Live site", href: "https://www.ethiocollegeprep.com" }],
+    role: "Full-Stack Developer",
+    challenge:
+      "A college prep company needed a professional web presence to showcase programs, handle online registrations, and let admins manage tutors, blogs, and testimonials without developer involvement.",
+    solution:
+      "Built a Next.js site with course landing pages, registration API routes, NextAuth admin authentication, and a CMS for blogs, FAQs, testimonials, tutors, and scholarship awards — deployed on Vercel.",
+    highlights: [
+      "Course pages for SAT, IELTS, CAC, summer school, and counseling programs",
+      "Registration API routes with MongoDB persistence",
+      "Admin CMS for blogs, FAQs, testimonials, and tutor profiles",
+      "NextAuth authentication with Vercel Analytics integration",
+      "Vercel deployment with automated build hooks on content updates",
     ],
   },
 ];
 
-export const aboutText = `I'm a full-stack developer with 3+ years of experience building production applications — from business systems and community platforms to real-time tracking apps. I focus on clean architecture, type-safe APIs, and interfaces that actually work for users.
-
-I've shipped systems handling 10K+ records, designed GraphQL APIs serving under 150ms at p95, and built offline-first PWAs for low-connectivity environments. I care about performance, maintainability, and getting the details right.`;
+export const aboutText = `I'm a full-stack developer who ships production systems end-to-end — Spring Boot APIs handling real payments and data, paired with React and Next.js interfaces people actually use, for clients from Ethiopia to Australia.`;
 
 export type Skill = {
   id: string;
