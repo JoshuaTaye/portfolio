@@ -14,7 +14,7 @@ import { SketchCard } from "./SketchCard";
 import { SketchFieldNode } from "./SketchFieldNode";
 import { SketchButtonNode } from "./SketchButtonNode";
 import { ThemeToggle } from "./ThemeToggle";
-import { SocialIcon, isSocialIcon } from "./SocialIcons";
+import { SocialIcon, isSocialIcon, EmailIcon, PhoneIcon, SendIcon } from "./SocialIcons";
 import { ProjectModal } from "./ProjectModal";
 import { projects, aboutText, contact, type Project } from "@/app/lib/seed-data";
 import { getChildrenIds, getNode, getPathToNode } from "@/app/lib/graph-data";
@@ -36,7 +36,7 @@ const PROJECTS_H = 240;
 const ABOUT_W = 440;
 const ABOUT_H = 200;
 const CONTACT_W = 360;
-const CONTACT_H = 180;
+const CONTACT_H = 272;
 
 const ROOT_CENTERS: Record<string, { x: number; y: number }> = {
   intro: { x: CX, y: CY - 80 + INTRO_H / 2 },
@@ -517,13 +517,16 @@ export function Canvas() {
                 }
               >
                 <div className="flex h-full flex-col justify-center">
-                  <h1
-                    className={`text-4xl font-bold tracking-tight transition-colors duration-500 ${
-                      introHovered ? "text-white drop-shadow-md" : "text-[var(--theme-base)]"
-                    }`}
-                  >
-                    Joshua T. Alemayehu
-                  </h1>
+                  <div className="flex items-center gap-3">
+                    <img src="/logo.svg" alt="" className="h-9 w-9 shrink-0" />
+                    <h1
+                      className={`text-4xl font-bold tracking-tight transition-colors duration-500 ${
+                        introHovered ? "text-white drop-shadow-md" : "text-[var(--theme-base)]"
+                      }`}
+                    >
+                      Joshua T. Alemayehu
+                    </h1>
+                  </div>
                   <p
                     className={`mt-4 text-lg transition-colors duration-500 ${
                       introHovered ? "text-white/90 drop-shadow-md" : "text-[var(--theme-base-muted)]"
@@ -620,28 +623,56 @@ export function Canvas() {
               >
                 <SectionNode id="contact" title="Contact" width={CONTACT_W} height={CONTACT_H} accentFill>
                   {expandedPath[0] !== "contact" && (
-                    <>
+                    <div className="flex flex-col gap-3">
                       <a
                         href={`mailto:${contact.email}`}
-                        className="text-sm font-medium text-[var(--theme-base)] underline decoration-[var(--theme-pencil-light)] underline-offset-2 hover:decoration-[var(--theme-accent)]"
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-2.5 text-sm font-medium text-[var(--theme-base)] transition-colors duration-200 hover:text-[var(--theme-accent)]"
                       >
-                        {contact.email}
+                        <EmailIcon className="h-4 w-4 shrink-0 text-[var(--theme-accent)]" />
+                        <span className="underline decoration-[var(--theme-pencil-light)] underline-offset-2">
+                          {contact.email}
+                        </span>
                       </a>
-                      <ul className="mt-3 flex flex-wrap gap-3" aria-label="Links">
+                      <a
+                        href={`tel:${contact.phone}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-2.5 text-sm font-medium text-[var(--theme-base)] transition-colors duration-200 hover:text-[var(--theme-accent)]"
+                      >
+                        <PhoneIcon className="h-4 w-4 shrink-0 text-[var(--theme-accent)]" />
+                        <span className="underline decoration-[var(--theme-pencil-light)] underline-offset-2">
+                          {contact.phone}
+                        </span>
+                      </a>
+                      <ul className="mt-1 flex flex-wrap gap-2.5" aria-label="Social links">
                         {contact.links.map(({ label, href }) => (
                           <li key={label}>
                             <a
                               href={href}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-sm text-[var(--theme-base-muted)] hover:text-[var(--theme-base)]"
+                              onClick={(e) => e.stopPropagation()}
+                              aria-label={label}
+                              className="flex h-8 w-8 items-center justify-center rounded-none border border-[var(--theme-pencil-light)] text-[var(--theme-base-muted)] transition-colors duration-200 hover:border-[var(--theme-accent)] hover:text-[var(--theme-accent)]"
                             >
-                              {label}
+                              {isSocialIcon(label) ? <SocialIcon label={label} className="h-4 w-4" /> : label}
                             </a>
                           </li>
                         ))}
                       </ul>
-                    </>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedPath(["contact"]);
+                          setInquiryFormOpen(true);
+                        }}
+                        className="mt-2 inline-flex w-fit items-center gap-2 rounded-none border border-[var(--theme-accent)] px-3.5 py-1.5 text-xs font-semibold text-[var(--theme-accent)] transition-colors duration-200 hover:bg-[var(--theme-accent)] hover:text-white"
+                      >
+                        <SendIcon className="h-3.5 w-3.5 shrink-0" />
+                        Click to send a message
+                      </button>
+                    </div>
                   )}
                   {expandedPath[0] === "contact" && (
                     <p className="text-sm text-[var(--theme-base-muted)]">Click a card to explore.</p>
@@ -947,7 +978,10 @@ function CanvasScrollFallback({
             transition={{ duration: 0.6, delay: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
             className="mb-6 h-px w-16 origin-left bg-[var(--theme-pencil-light)]"
           />
-          <h1 className="text-3xl font-bold tracking-tight text-[var(--theme-base)] sm:text-4xl">Joshua T. Alemayehu</h1>
+          <div className="flex items-center gap-3">
+            <img src="/logo.svg" alt="" className="h-8 w-8 shrink-0" />
+            <h1 className="text-3xl font-bold tracking-tight text-[var(--theme-base)] sm:text-4xl">Joshua T. Alemayehu</h1>
+          </div>
           <p className="mt-3 max-w-xs text-base leading-relaxed text-[var(--theme-base-muted)]">
             Full-stack developer — design systems, APIs, and interfaces.
           </p>
@@ -1025,12 +1059,36 @@ function CanvasScrollFallback({
           <div className="mt-1 h-px w-8 bg-[var(--theme-accent)] opacity-40" />
         </ScrollReveal>
         <ScrollReveal delay={0.1}>
-          <a
-            href={`mailto:${contact.email}`}
-            className="mt-6 inline-block text-sm font-medium text-[var(--theme-base)] underline decoration-[var(--theme-pencil-light)] underline-offset-4 transition-colors hover:decoration-[var(--theme-accent)]"
-          >
-            {contact.email}
-          </a>
+          <div className="mt-6 flex flex-col gap-3">
+            <a
+              href={`mailto:${contact.email}`}
+              className="inline-flex items-center gap-2.5 text-sm font-medium text-[var(--theme-base)] underline decoration-[var(--theme-pencil-light)] underline-offset-4 transition-colors hover:decoration-[var(--theme-accent)]"
+            >
+              <EmailIcon className="h-4 w-4 shrink-0 text-[var(--theme-accent)]" />
+              {contact.email}
+            </a>
+            <a
+              href={`tel:${contact.phone}`}
+              className="inline-flex items-center gap-2.5 text-sm font-medium text-[var(--theme-base)] underline decoration-[var(--theme-pencil-light)] underline-offset-4 transition-colors hover:decoration-[var(--theme-accent)]"
+            >
+              <PhoneIcon className="h-4 w-4 shrink-0 text-[var(--theme-accent)]" />
+              {contact.phone}
+            </a>
+            <div className="mt-1 flex items-center gap-3">
+              {contact.links.map(({ label, href }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                  className="flex h-9 w-9 items-center justify-center rounded-none border border-[var(--theme-pencil-light)] text-[var(--theme-base-muted)] transition-colors duration-200 hover:border-[var(--theme-accent)] hover:text-[var(--theme-accent)]"
+                >
+                  {isSocialIcon(label) ? <SocialIcon label={label} className="h-4 w-4" /> : label}
+                </a>
+              ))}
+            </div>
+          </div>
         </ScrollReveal>
         <ScrollReveal delay={0.2}>
           <div className="mt-8 border border-[var(--theme-pencil-light)] bg-[var(--theme-card-bg)] p-5">

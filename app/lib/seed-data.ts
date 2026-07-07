@@ -299,6 +299,7 @@ export const resumeUrl = "/resume.pdf";
 
 export const contact = {
   email: "tayejoshua4@gmail.com",
+  phone: "+251943015328",
   links: [
     { label: "GitHub", href: "https://github.com/JoshuaTaye" },
     {
