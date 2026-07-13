@@ -239,30 +239,48 @@ export type Experience = {
 export const experiences: Experience[] = [
   {
     id: "exp-1",
-    company: "Freelance / Contract",
-    role: "Full-Stack Developer",
-    period: "2024 – Present",
+    company: "HABTech Solutions",
+    role: "Back End Developer",
+    period: "Feb 2025 – Present",
     description:
-      "Building production web applications for clients across education, logistics, and community sectors. End-to-end delivery from architecture to deployment.",
-    technologies: ["Next.js", "TypeScript", "PostgreSQL", "Docker", "Vercel"],
+      "Modernizing the Blood Safety Information System (BSIS) with Ethiopian Blood and Tissue Bank Service — multi-tenant Spring Boot services for donor eligibility, questionnaires, and notification dispatch.",
+    technologies: ["Java", "Spring Boot", "PostgreSQL", "RabbitMQ"],
   },
   {
     id: "exp-2",
     company: "Go Gerami",
-    role: "Lead Frontend Developer",
-    period: "2023 – 2024",
+    role: "Full Stack Developer",
+    period: "Nov 2025 – Present",
     description:
-      "Led frontend development for a ride-hailing platform. Built real-time GPS tracking, offline-first PWA architecture, and responsive mobile-first interfaces.",
-    technologies: ["React", "Node.js", "MongoDB", "Socket.io", "PWA"],
+      "Building a multi-tenant gift and experience marketplace across Spring Boot, React/TypeScript, and PostgreSQL — payments, multi-currency pricing, and role-based dashboards.",
+    technologies: ["Spring Boot", "React", "TypeScript", "PostgreSQL", "Stripe"],
   },
   {
     id: "exp-3",
-    company: "Community Projects",
-    role: "Full-Stack Developer",
-    period: "2022 – 2023",
+    company: "Bilal Community",
+    role: "Full Stack Developer",
+    period: "Dec 2025 – Mar 2026",
     description:
-      "Developed community platforms and internal tools using Java/Spring Boot and Angular. Managed databases, authentication, and deployment infrastructure.",
-    technologies: ["Angular", "Spring Boot", "PostgreSQL", "JWT", "Liquibase"],
+      "Delivered a membership, payments, donations, and events platform with Stripe billing, OTP/OAuth auth, and admin dashboards for a community organisation.",
+    technologies: ["Spring Boot", "Next.js", "PostgreSQL", "Stripe", "Twilio"],
+  },
+  {
+    id: "exp-4",
+    company: "Ethio College Prep",
+    role: "Full Stack Website Developer",
+    period: "Feb 2024 – Present",
+    description:
+      "Built and independently maintain the Ethio College Prep website end-to-end with Next.js, Tailwind CSS, and MongoDB.",
+    technologies: ["Next.js", "Tailwind CSS", "MongoDB"],
+  },
+  {
+    id: "exp-5",
+    company: "Google Developer Students Club",
+    role: "Backend Trainer",
+    period: "Jul 2024 – Sep 2024",
+    description:
+      "Led an 8-week Backend Development course covering JavaScript, async programming, Node.js, MongoDB/Mongoose, Express, Multer uploads, and deployment. Delivered hands-on sessions, assigned projects, demoed full-scale apps, and mentored students throughout.",
+    technologies: ["JavaScript", "Node.js", "Express", "MongoDB", "Multer"],
   },
 ];
 

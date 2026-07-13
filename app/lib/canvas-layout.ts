@@ -159,12 +159,30 @@ export function getCardPositions(
     const radius = radiusForDepth(depth, childIds.length);
 
     if (parentId === "about") {
-      const verticalGap = 180;
+      // Fan Bio left and Experience right at the same vertical level (angled down from About)
+      const aboutRadius = 420;
+      const aboutAngles =
+        childIds.length === 2
+          ? [(Math.PI * 3) / 4, Math.PI / 4] // 135° and 45° — same y, mirrored
+          : null;
       childIds.forEach((id, j) => {
-        positions.set(id, {
-          x: parentPos.x,
-          y: parentPos.y + (j + 1) * verticalGap,
-        });
+        if (aboutAngles) {
+          const a = aboutAngles[j];
+          positions.set(id, {
+            x: parentPos.x + aboutRadius * Math.cos(a),
+            y: parentPos.y + aboutRadius * Math.sin(a),
+          });
+        } else {
+          const childPositions = radialPositions(
+            parentPos.x,
+            parentPos.y,
+            childIds.length,
+            aboutRadius,
+            Math.PI / 4,
+            Math.PI / 2
+          );
+          positions.set(id, childPositions[j]);
+        }
         order.push(id);
       });
     } else {

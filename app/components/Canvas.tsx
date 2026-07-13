@@ -16,7 +16,9 @@ import { SketchButtonNode } from "./SketchButtonNode";
 import { ThemeToggle } from "./ThemeToggle";
 import { SocialIcon, isSocialIcon, EmailIcon, PhoneIcon, SendIcon } from "./SocialIcons";
 import { ProjectModal } from "./ProjectModal";
-import { projects, aboutText, contact, type Project } from "@/app/lib/seed-data";
+import { ExperienceModal } from "./ExperienceModal";
+import { BioModal } from "./BioModal";
+import { projects, aboutText, contact, experiences, type Experience, type Project } from "@/app/lib/seed-data";
 import { getChildrenIds, getNode, getPathToNode } from "@/app/lib/graph-data";
 import { getCardPositions, LAYOUT } from "@/app/lib/canvas-layout";
 import { theme } from "@/app/lib/theme";
@@ -72,6 +74,8 @@ export function Canvas() {
   const [inquirySubmitting, setInquirySubmitting] = useState(false);
   const [inquirySuccess, setInquirySuccess] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedExperience, setSelectedExperience] = useState<Experience | null>(null);
+  const [bioOpen, setBioOpen] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 768px)");
@@ -108,11 +112,22 @@ export function Canvas() {
   }, [darkMode, mounted]);
 
   const toggleRoot = useCallback((rootId: string) => {
-    setExpandedPath((prev) => (prev[0] === rootId ? [] : [rootId]));
+    setExpandedPath((prev) => {
+      if (prev[0] !== rootId) return [rootId];
+      // Return to the root card from a nested card. This keeps the root
+      // expanded, collapses its descendants, and triggers re-centering.
+      if (prev.length > 1) return [rootId];
+      return [];
+    });
   }, []);
 
   const expandToCard = useCallback((nodeId: string) => {
-    setExpandedPath(getPathToNode(nodeId));
+    const nodePath = getPathToNode(nodeId);
+    setExpandedPath((prev) => {
+      const isAlreadyExpanded =
+        prev.length === nodePath.length && prev.every((id, index) => id === nodePath[index]);
+      return isAlreadyExpanded ? nodePath.slice(0, -1) : nodePath;
+    });
   }, []);
 
   useEffect(() => {
@@ -123,6 +138,14 @@ export function Canvas() {
   }, [expandedPath]);
 
   const positions = getCardPositions(expandedPath, ROOT_CENTERS);
+  const activeRootId = expandedPath[0];
+  const isUnrelatedRoot = (nodeId: string) =>
+    Boolean(activeRootId && nodeId !== "intro" && !expandedPath.includes(nodeId));
+  const activeCardId = expandedPath.at(-1);
+  const isDimmedCard = (nodeId: string) =>
+    expandedPath.length > 1 &&
+    !expandedPath.includes(nodeId) &&
+    !(activeCardId && getChildrenIds(activeCardId).includes(nodeId));
 
 
   if (!mounted) {
@@ -137,6 +160,9 @@ export function Canvas() {
         selectedProject={selectedProject}
         onCloseProject={() => setSelectedProject(null)}
         onSelectProject={setSelectedProject}
+        selectedExperience={selectedExperience}
+        onCloseExperience={() => setSelectedExperience(null)}
+        onSelectExperience={setSelectedExperience}
       />
     );
   }
@@ -190,6 +216,8 @@ export function Canvas() {
   return (
     <div ref={containerRef} className="relative h-screen w-full overflow-hidden bg-[var(--theme-background)]">
       <ProjectModal project={selectedProject} onClose={() => setSelectedProject(null)} />
+      <ExperienceModal experience={selectedExperience} onClose={() => setSelectedExperience(null)} />
+      <BioModal open={bioOpen} biography={aboutText} onClose={() => setBioOpen(false)} />
       <ThemeToggle darkMode={darkMode} toggle={toggleTheme} />
 
       <TransformWrapper
@@ -199,7 +227,7 @@ export function Canvas() {
         centerOnInit
         limitToBounds={false}
         panning={{ velocityDisabled: true }}
-        doubleClick={{ mode: "reset" }}
+        doubleClick={{ disabled: true }}
       >
         <PanToExpandedNode
           expandedPath={expandedPath}
@@ -257,6 +285,7 @@ export function Canvas() {
                       x2={aboutPos.x}
                       y2={aboutPos.y}
                       animate
+                      isDimmed={isUnrelatedRoot("about")}
                     />
                   );
                 })()}
@@ -277,6 +306,7 @@ export function Canvas() {
                         x2={childPos.x}
                         y2={childPos.y}
                         animate
+                        isDimmed={isDimmedCard(childId)}
                       />
                     );
                   });
@@ -296,6 +326,10 @@ export function Canvas() {
                   const cardY = pos.y - CARD_H / 2;
                   const hasChildren = (getChildrenIds(childId).length ?? 0) > 0;
                   const isInquiryTrigger = isInquiryCard && !inquiryFormOpen;
+                  const experience = experiences.find((item) => item.id === childId);
+                  const isExperienceCard = Boolean(experience);
+                  const isBioCard = childId === "bio";
+                  const isDimmed = isDimmedCard(childId);
                   return (
                     <motion.g
                       key={childId}
@@ -307,13 +341,13 @@ export function Canvas() {
                         delay: i * 0.06,
                       }}
                       style={{
-                        cursor: hasChildren || isInquiryTrigger || node.project ? "pointer" : "default",
+                        cursor: hasChildren || isInquiryTrigger || node.project || isExperienceCard || isBioCard ? "pointer" : "default",
                         pointerEvents: "auto",
                       }}
                       onMouseEnter={() => setHoveredCardId(childId)}
                       onMouseLeave={() => setHoveredCardId(null)}
                       onPointerDown={(e) => {
-                        if (hasChildren || isInquiryTrigger) e.stopPropagation();
+                        if (hasChildren || isInquiryTrigger || isExperienceCard || isBioCard) e.stopPropagation();
                       }}
                       onClick={(e) => {
                         if (isInquiryTrigger) {
@@ -324,6 +358,16 @@ export function Canvas() {
                         if (node.project) {
                           e.stopPropagation();
                           setSelectedProject(node.project);
+                          return;
+                        }
+                        if (experience) {
+                          e.stopPropagation();
+                          setSelectedExperience(experience);
+                          return;
+                        }
+                        if (isBioCard) {
+                          e.stopPropagation();
+                          setBioOpen(true);
                           return;
                         }
                         if (hasChildren) {
@@ -342,18 +386,32 @@ export function Canvas() {
                           setSelectedProject(node.project);
                           return;
                         }
+                        if (experience && (e.key === "Enter" || e.key === " ")) {
+                          e.preventDefault();
+                          setSelectedExperience(experience);
+                          return;
+                        }
+                        if (isBioCard && (e.key === "Enter" || e.key === " ")) {
+                          e.preventDefault();
+                          setBioOpen(true);
+                          return;
+                        }
                         if (hasChildren && (e.key === "Enter" || e.key === " ")) {
                           e.preventDefault();
                           expandToCard(childId);
                         }
                       }}
-                      role={hasChildren || isInquiryTrigger || node.project ? "button" : undefined}
-                      tabIndex={hasChildren || isInquiryTrigger || node.project ? 0 : undefined}
+                      role={hasChildren || isInquiryTrigger || node.project || isExperienceCard || isBioCard ? "button" : undefined}
+                      tabIndex={hasChildren || isInquiryTrigger || node.project || isExperienceCard || isBioCard ? 0 : undefined}
                       aria-label={
                         isInquiryTrigger
                           ? "Open feedback form"
                           : node.project
                             ? `View ${node.label}`
+                            : isExperienceCard
+                              ? `View ${node.label}`
+                              : isBioCard
+                                ? "View biography"
                             : hasChildren
                               ? `Expand ${node.label}`
                               : node.label
@@ -366,6 +424,8 @@ export function Canvas() {
                         height={CARD_H}
                         pointerEventsNone={false}
                         isHovered={hoveredCardId === childId}
+                        isExpanded={expandedPath.includes(childId)}
+                        isDimmed={isDimmed}
                         darkMode={darkMode}
                         data={{
                           ...node,
@@ -481,15 +541,25 @@ export function Canvas() {
               })()}
             </svg>
 
-            {/* Intro — center (no expand) */}
+            {/* Intro — reset canvas and return to center */}
             <div
+              role="button"
+              tabIndex={0}
               className="absolute"
               style={{
                 left: CX - INTRO_W / 2,
                 top: CY - 80 - INTRO_H / 2,
               }}
+              onClick={() => setExpandedPath([])}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setExpandedPath([]);
+                }
+              }}
               onMouseEnter={() => setIntroHovered(true)}
               onMouseLeave={() => setIntroHovered(false)}
+              aria-label="Return to the center and collapse all cards"
             >
               <SectionNode
                 id="intro"
@@ -532,7 +602,7 @@ export function Canvas() {
                       introHovered ? "text-white/90 drop-shadow-md" : "text-[var(--theme-base-muted)]"
                     }`}
                   >
-                    Full-stack developer — design systems, APIs, and interfaces.
+                    Full-stack developer
                   </p>
                 </div>
               </SectionNode>
@@ -557,13 +627,21 @@ export function Canvas() {
                 aria-label="Expand projects"
                 className="cursor-pointer"
               >
-                <SectionNode id="projects" title="Projects" width={PROJECTS_W} height={PROJECTS_H} accentFill>
+                <SectionNode
+                  id="projects"
+                  title="Projects"
+                  width={PROJECTS_W}
+                  height={PROJECTS_H}
+                  accentFill
+                  isExpanded={activeRootId === "projects"}
+                  isDimmed={isUnrelatedRoot("projects")}
+                >
                   {expandedPath[0] !== "projects" && (
                     <p className="text-sm text-[var(--theme-base-muted)]">
                       Click to expand and explore project nodes. Project Alpha expands into Tech, Demo, Repo — then each can expand further.
                     </p>
                   )}
-                  {expandedPath[0] === "projects" && (
+                  {expandedPath[0] === "projects" && expandedPath.length === 1 && (
                     <p className="text-sm text-[var(--theme-base-muted)]">
                       Click a card to expand. Click again on section to collapse.
                     </p>
@@ -591,11 +669,19 @@ export function Canvas() {
                 aria-label="Expand about"
                 className="cursor-pointer"
               >
-                <SectionNode id="about" title="About" width={ABOUT_W} height={ABOUT_H} accentFill>
+                <SectionNode
+                  id="about"
+                  title="About"
+                  width={ABOUT_W}
+                  height={ABOUT_H}
+                  accentFill
+                  isExpanded={activeRootId === "about"}
+                  isDimmed={isUnrelatedRoot("about")}
+                >
                   {expandedPath[0] !== "about" && (
                     <p className="text-sm leading-relaxed text-[var(--theme-base-muted)]">{aboutText}</p>
                   )}
-                  {expandedPath[0] === "about" && (
+                  {expandedPath[0] === "about" && expandedPath.length === 1 && (
                     <p className="text-sm text-[var(--theme-base-muted)]">Click a card to explore.</p>
                   )}
                 </SectionNode>
@@ -621,7 +707,15 @@ export function Canvas() {
                 aria-label="Expand contact"
                 className="cursor-pointer"
               >
-                <SectionNode id="contact" title="Contact" width={CONTACT_W} height={CONTACT_H} accentFill>
+                <SectionNode
+                  id="contact"
+                  title="Contact"
+                  width={CONTACT_W}
+                  height={CONTACT_H}
+                  accentFill
+                  isExpanded={activeRootId === "contact"}
+                  isDimmed={isUnrelatedRoot("contact")}
+                >
                   {expandedPath[0] !== "contact" && (
                     <div className="flex flex-col gap-3">
                       <a
@@ -674,7 +768,7 @@ export function Canvas() {
                       </button>
                     </div>
                   )}
-                  {expandedPath[0] === "contact" && (
+                  {expandedPath[0] === "contact" && expandedPath.length === 1 && (
                     <p className="text-sm text-[var(--theme-base-muted)]">Click a card to explore.</p>
                   )}
                 </SectionNode>
@@ -707,8 +801,7 @@ function PanToExpandedNode({
     if (pathKey === prevPathKeyRef.current) return;
     prevPathKeyRef.current = pathKey;
 
-    if (expandedPath.length === 0) return;
-    const activeId = expandedPath[expandedPath.length - 1];
+    const activeId = expandedPath.at(-1) ?? "intro";
     const targetPos = positions.get(activeId);
     const container = containerRef.current;
     const ref = ctx?.getContext?.();
@@ -885,12 +978,18 @@ function CanvasScrollFallback({
   selectedProject,
   onCloseProject,
   onSelectProject,
+  selectedExperience,
+  onCloseExperience,
+  onSelectExperience,
 }: {
   darkMode: boolean;
   setDarkMode: React.Dispatch<React.SetStateAction<boolean>>;
   selectedProject: Project | null;
   onCloseProject: () => void;
   onSelectProject: (project: Project) => void;
+  selectedExperience: Experience | null;
+  onCloseExperience: () => void;
+  onSelectExperience: (experience: Experience) => void;
 }) {
   const [activeSection, setActiveSection] = useState("hero");
   const [inquiryName, setInquiryName] = useState("");
@@ -956,6 +1055,7 @@ function CanvasScrollFallback({
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden bg-[var(--theme-background)]">
       <ProjectModal project={selectedProject} onClose={onCloseProject} />
+      <ExperienceModal experience={selectedExperience} onClose={onCloseExperience} />
       <ThemeToggle darkMode={darkMode} toggle={() => setDarkMode((d) => !d)} />
 
       <nav className="fixed right-3 top-1/2 z-50 flex -translate-y-1/2 flex-col gap-4" aria-label="Section navigation">
@@ -983,7 +1083,7 @@ function CanvasScrollFallback({
             <h1 className="text-3xl font-bold tracking-tight text-[var(--theme-base)] sm:text-4xl">Joshua T. Alemayehu</h1>
           </div>
           <p className="mt-3 max-w-xs text-base leading-relaxed text-[var(--theme-base-muted)]">
-            Full-stack developer — design systems, APIs, and interfaces.
+            Full-stack developer
           </p>
           <motion.div
             initial={{ scaleX: 0 }}
@@ -1051,6 +1151,40 @@ function CanvasScrollFallback({
         <ScrollReveal delay={0.1}>
           <p className="mt-6 text-sm leading-[1.8] text-[var(--theme-base-muted)]">{aboutText}</p>
         </ScrollReveal>
+
+        <ScrollReveal delay={0.15}>
+          <h3 className="mt-12 mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--theme-accent)]">Experience</h3>
+          <div className="mt-1 h-px w-8 bg-[var(--theme-accent)] opacity-40" />
+        </ScrollReveal>
+        <div className="mt-6 flex flex-col gap-6">
+          {experiences.map((exp, i) => (
+            <ScrollReveal key={exp.id} delay={0.18 + i * 0.05}>
+              <button
+                type="button"
+                onClick={() => onSelectExperience(exp)}
+                className="group w-full border border-transparent p-3 text-left transition-colors hover:border-[var(--theme-pencil-light)] hover:bg-[var(--theme-accent)]/[0.04] focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent)]"
+                aria-label={`View ${exp.role} at ${exp.company}`}
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                  <h4 className="text-sm font-semibold text-[var(--theme-base)]">{exp.role}</h4>
+                  <span className="text-[11px] tracking-wide text-[var(--theme-base-muted)]">{exp.period}</span>
+                </div>
+                <p className="mt-0.5 text-xs font-medium text-[var(--theme-accent)]">{exp.company}</p>
+                <p className="mt-2 text-sm leading-relaxed text-[var(--theme-base-muted)]">{exp.description}</p>
+                <ul className="mt-2.5 flex flex-wrap gap-1.5" aria-label="Technologies">
+                  {exp.technologies.map((tech) => (
+                    <li
+                      key={tech}
+                      className="border border-[var(--theme-pencil-light)] px-2 py-0.5 text-[10px] uppercase tracking-wider text-[var(--theme-base-muted)]"
+                    >
+                      {tech}
+                    </li>
+                  ))}
+                </ul>
+              </button>
+            </ScrollReveal>
+          ))}
+        </div>
       </section>
 
       <section ref={contactRef} id="m-contact" className="px-5 py-16 pb-24 sm:px-8">

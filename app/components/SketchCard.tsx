@@ -17,6 +17,10 @@ type SketchCardProps = {
   pointerEventsNone?: boolean;
   /** When true, floating dampens and card shows bulge (from parent hover). */
   isHovered?: boolean;
+  /** When true, card is on the expanded path — accent border + glow. */
+  isExpanded?: boolean;
+  /** When true, card is visible but outside the current expanded path. */
+  isDimmed?: boolean;
   /** When true, card shows soft ambient glow (dark mode only). */
   darkMode?: boolean;
 };
@@ -28,7 +32,7 @@ const FLOAT_AMPLITUDE_ROTATE = 0.5;
 
 /**
  * Floating sketch card. Slow drift + gentle rotation; on hover dampens and bulges.
- * Dark mode: soft ambient glow scaled to card size.
+ * Expanded path cards get an accent stroke and soft glow.
  */
 export function SketchCard({
   x,
@@ -40,11 +44,13 @@ export function SketchCard({
   className = "",
   pointerEventsNone = false,
   isHovered = false,
+  isExpanded = false,
+  isDimmed = false,
   darkMode = false,
 }: SketchCardProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const reducedMotion = useReducedMotion();
-  const noFloat = reducedMotion || isHovered;
+  const noFloat = reducedMotion || isHovered || isExpanded || isDimmed;
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -52,16 +58,22 @@ export function SketchCard({
     svg.innerHTML = "";
     const rc = rough.svg(svg);
     const node = rc.rectangle(2, 2, width - 4, height - 4, {
-      stroke: "var(--theme-pencil-light)",
-      strokeWidth: 0.9,
-      roughness,
-      bowing: 0.6,
+      stroke: isExpanded ? "var(--theme-accent)" : "var(--theme-pencil-light)",
+      strokeWidth: isExpanded ? 1.6 : 0.9,
+      roughness: isExpanded ? 1.1 : roughness,
+      bowing: isExpanded ? 0.4 : 0.6,
     });
     if (node) svg.appendChild(node);
-  }, [width, height, roughness]);
+  }, [width, height, roughness, isExpanded]);
 
   const description = data.description ?? data.project?.description ?? "";
   const tags = data.tags ?? data.project?.tags ?? [];
+
+  const shadowFilter = isExpanded
+    ? "var(--theme-card-shadow-expanded)"
+    : isHovered
+      ? "var(--theme-card-shadow-hover)"
+      : "var(--theme-card-shadow)";
 
   return (
     <motion.g
@@ -69,16 +81,16 @@ export function SketchCard({
       style={{
         pointerEvents: pointerEventsNone ? "none" : undefined,
         transformOrigin: `${x + width / 2}px ${y + height / 2}px`,
-        filter: isHovered ? "var(--theme-card-shadow-hover)" : "var(--theme-card-shadow)",
+        filter: isDimmed ? `${shadowFilter} blur(1.25px)` : shadowFilter,
       }}
       initial={{ opacity: 0, scale: 0.96 }}
       animate={{
-        opacity: 1,
-        scale: 1,
+        opacity: isDimmed ? 0.4 : 1,
+        scale: isExpanded ? 1.03 : 1,
         y: noFloat ? 0 : [0, FLOAT_AMPLITUDE_Y, 0],
         rotate: noFloat ? 0 : [0, FLOAT_AMPLITUDE_ROTATE, -FLOAT_AMPLITUDE_ROTATE, 0],
-        scaleX: isHovered ? 1 : 1,
-        scaleY: isHovered ? 1.02 : 1,
+        scaleX: isHovered && !isExpanded ? 1 : undefined,
+        scaleY: isHovered && !isExpanded ? 1.02 : undefined,
       }}
       transition={
         reducedMotion
@@ -97,6 +109,19 @@ export function SketchCard({
       }
     >
       <g transform={`translate(${x}, ${y})`}>
+        {/* Soft glow halo behind expanded cards */}
+        {isExpanded && (
+          <rect
+            x={-6}
+            y={-6}
+            width={width + 12}
+            height={height + 12}
+            rx={4}
+            fill="var(--theme-accent)"
+            fillOpacity={darkMode ? 0.12 : 0.08}
+            style={{ pointerEvents: "none" }}
+          />
+        )}
         {/* Invisible hit area so pointer events are captured on the full card area */}
         <rect
           x={0}
@@ -115,6 +140,18 @@ export function SketchCard({
           fill="var(--theme-card-bg)"
           style={{ pointerEvents: "none" }}
         />
+        {/* Accent wash when expanded */}
+        {isExpanded && (
+          <rect
+            x={2}
+            y={2}
+            width={width - 4}
+            height={height - 4}
+            rx={1}
+            fill="var(--theme-card-expanded-fill)"
+            style={{ pointerEvents: "none" }}
+          />
+        )}
         <svg
           ref={svgRef}
           width={width}
@@ -124,13 +161,20 @@ export function SketchCard({
         />
         <foreignObject x={12} y={12} width={width - 24} height={height - 24}>
           <div
-            className="flex flex-col gap-2 p-2 text-left bg-[var(--theme-card-bg)]"
+            className="flex flex-col gap-2 p-2 text-left"
             style={{
               color: "var(--theme-base)",
               fontFamily: "var(--font-sans), system-ui, sans-serif",
+              background: "transparent",
             }}
           >
-            <h3 className="text-sm font-semibold text-[var(--theme-base)]">{data.label}</h3>
+            <h3
+              className={`text-sm font-semibold ${
+                isExpanded ? "text-[var(--theme-accent)]" : "text-[var(--theme-base)]"
+              }`}
+            >
+              {data.label}
+            </h3>
             {description && (
               <p className="text-xs leading-relaxed text-[var(--theme-base-muted)]">{description}</p>
             )}
@@ -139,7 +183,11 @@ export function SketchCard({
                 {tags.map((tag) => (
                   <li
                     key={tag}
-                    className="rounded border border-[var(--theme-pencil-light)] px-1.5 py-0.5 text-[10px] text-[var(--theme-base-muted)]"
+                    className={`rounded border px-1.5 py-0.5 text-[10px] ${
+                      isExpanded
+                        ? "border-[var(--theme-accent)]/40 text-[var(--theme-base-muted)]"
+                        : "border-[var(--theme-pencil-light)] text-[var(--theme-base-muted)]"
+                    }`}
                   >
                     {tag}
                   </li>
@@ -157,7 +205,7 @@ export function SketchCard({
           fill="var(--theme-accent)"
           fillOpacity={0}
           initial={false}
-          whileHover={{ fillOpacity: 0.06 }}
+          whileHover={{ fillOpacity: isExpanded ? 0.04 : 0.06 }}
           transition={{ duration: theme.timing.hover, ease: theme.easing.calm }}
           style={{ pointerEvents: "none" }}
         />

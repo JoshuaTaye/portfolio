@@ -4,7 +4,7 @@
  */
 
 import type { Project } from "./seed-data";
-import { projects } from "./seed-data";
+import { projects, experiences } from "./seed-data";
 
 export type GraphNodeData = {
   id: string;
@@ -22,7 +22,7 @@ export const graphNodes: Record<string, GraphNodeData> = {
   intro: {
     id: "intro",
     label: "Joshua T. Alemayehu",
-    description: "Full-stack developer — production systems, type-safe APIs, and performant interfaces.",
+    description: "Full-stack developer",
   },
   projects: {
     id: "projects",
@@ -240,9 +240,22 @@ export const graphNodes: Record<string, GraphNodeData> = {
     id: "experience",
     label: "Experience",
     parentId: "about",
-    description: "Freelance full-stack developer — marketplaces, fintech, and community platforms in Java/Spring Boot and React/Next.js.",
-    children: [],
+    description: "Roles across backend systems, full-stack products, and developer education.",
+    children: experiences.map((e) => e.id),
   },
+  ...Object.fromEntries(
+    experiences.map((exp) => [
+      exp.id,
+      {
+        id: exp.id,
+        label: `${exp.role} · ${exp.company}`,
+        parentId: "experience",
+        description: `${exp.period} — ${exp.description}`,
+        tags: exp.technologies,
+        children: [],
+      },
+    ])
+  ),
 };
 
 export function getChildrenIds(nodeId: string): string[] {

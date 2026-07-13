@@ -19,6 +19,8 @@
   
   --theme-card-shadow: drop-shadow(0 2px 3px rgba(0,0,0,0.06));
   --theme-card-shadow-hover: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+  --theme-card-shadow-expanded: drop-shadow(0 0 14px rgba(125, 154, 138, 0.35)) drop-shadow(0 4px 10px rgba(125, 154, 138, 0.18));
+  --theme-card-expanded-fill: rgba(125, 154, 138, 0.1);
 }
 
 /* Dark mode — entirely black bg, light graphite lines */
@@ -37,6 +39,8 @@
   
   --theme-card-shadow: drop-shadow(0 0 16px rgba(143, 170, 155, 0.1));
   --theme-card-shadow-hover: drop-shadow(0 0 24px rgba(143, 170, 155, 0.15));
+  --theme-card-shadow-expanded: drop-shadow(0 0 22px rgba(143, 170, 155, 0.45)) drop-shadow(0 0 40px rgba(143, 170, 155, 0.2));
+  --theme-card-expanded-fill: rgba(143, 170, 155, 0.14);
 }
 
 html {

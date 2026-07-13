@@ -14,6 +14,8 @@ type SketchEdgeProps = {
   curved?: boolean;
   /** Animate drawing in (stroke-dashoffset). */
   animate?: boolean;
+  /** Fade the connection when its destination card is outside the active branch. */
+  isDimmed?: boolean;
   className?: string;
 };
 
@@ -28,6 +30,7 @@ export function SketchEdge({
   y2,
   curved = true,
   animate = true,
+  isDimmed = false,
   className = "",
 }: SketchEdgeProps) {
   const roughRef = useRef<SVGGElement>(null);
@@ -69,7 +72,13 @@ export function SketchEdge({
   const shouldAnimate = animate && !reducedMotion && pathLength > 0;
 
   return (
-    <g className={className} aria-hidden>
+    <motion.g
+      className={className}
+      aria-hidden
+      initial={false}
+      animate={{ opacity: isDimmed ? 0.12 : 1 }}
+      transition={{ duration: theme.timing.focus, ease: theme.easing.calm }}
+    >
       <g ref={roughRef} />
       <motion.path
         ref={pathRef}
@@ -86,6 +95,6 @@ export function SketchEdge({
         }}
         style={{ pointerEvents: "none", visibility: shouldAnimate ? "visible" : "hidden" }}
       />
-    </g>
+    </motion.g>
   );
 }

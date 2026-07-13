@@ -6,7 +6,7 @@ import { Analytics } from "@vercel/analytics/next";
 export const metadata: Metadata = {
   title: "Joshua T. Alemayehu — Full-Stack Developer",
   description:
-    "Full-stack developer portfolio — production systems, type-safe APIs, and performant interfaces. Next.js, TypeScript, Spring Boot, PostgreSQL.",
+    "Full-stack developer portfolio — Next.js, TypeScript, Spring Boot, PostgreSQL.",
 };
 
 export default function RootLayout({

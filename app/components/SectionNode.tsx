@@ -14,6 +14,10 @@ type SectionNodeProps = {
   width: number;
   height: number;
   accentFill?: boolean;
+  /** When true, section is on the expanded path — accent border + glow. */
+  isExpanded?: boolean;
+  /** When true, section is visible but outside the active root branch. */
+  isDimmed?: boolean;
   background?: React.ReactNode;
 };
 
@@ -25,6 +29,8 @@ export function SectionNode({
   width,
   height,
   accentFill = true,
+  isExpanded = false,
+  isDimmed = false,
   background,
 }: SectionNodeProps) {
   const borderRef = useRef<SVGSVGElement>(null);
@@ -37,58 +43,85 @@ export function SectionNode({
     svg.innerHTML = "";
     const rc = rough.svg(svg);
     const node = rc.rectangle(2, 2, width - 4, height - 4, {
-      stroke: "var(--theme-pencil-light)",
-      strokeWidth: 0.9,
-      roughness: 1.3,
-      bowing: 0.5,
+      stroke: isExpanded ? "var(--theme-accent)" : "var(--theme-pencil-light)",
+      strokeWidth: isExpanded ? 1.6 : 0.9,
+      roughness: isExpanded ? 1.1 : 1.3,
+      bowing: isExpanded ? 0.35 : 0.5,
     });
     if (node) svg.appendChild(node);
-  }, [width, height]);
+  }, [width, height, isExpanded]);
 
   return (
-    <motion.section
-      id={id}
-      className={`relative overflow-hidden rounded-sm bg-[var(--theme-card-bg)] ${className}`}
-      style={{ width, height }}
-      initial="rest"
-      whileHover="hover"
-      animate={reducedMotion ? {} : hovered ? { y: 0 } : { y: [0, 6, 0] }}
-      transition={
-        reducedMotion
-          ? {}
-          : {
-              ...tapTransition,
-              y: hovered ? { duration: 0.35, ease: theme.easing.calm } : { duration: 8, repeat: Infinity, ease: "easeInOut" },
-            }
-      }
-      variants={reducedMotion ? {} : cardHover}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+    <div
+      style={{
+        width,
+        height,
+        filter: isExpanded
+          ? "var(--theme-card-shadow-expanded)"
+          : isDimmed
+            ? "blur(1.25px)"
+            : undefined,
+      }}
     >
-      {accentFill && (
-        <motion.div
-          className="pointer-events-none absolute inset-0 rounded-sm opacity-0"
-          style={{ backgroundColor: "var(--theme-accent)" }}
-          variants={{ rest: { opacity: 0 }, hover: { opacity: 0.08 } }}
-          transition={{ duration: theme.timing.fill, ease: theme.easing.calm }}
-        />
-      )}
-      {background && <div className="absolute inset-0 z-0">{background}</div>}
-      <svg
-        ref={borderRef}
-        className="pointer-events-none absolute inset-0 z-[5]"
-        width={width}
-        height={height}
-        aria-hidden
-      />
-      <div className="relative z-10 p-6">
-        {title && (
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[var(--theme-base-muted)]">
-            {title}
-          </h2>
+      <motion.section
+        id={id}
+        className={`relative overflow-hidden rounded-sm bg-[var(--theme-card-bg)] ${className}`}
+        style={{ width, height }}
+        initial="rest"
+        whileHover="hover"
+        animate={
+          reducedMotion
+            ? {}
+            : {
+                opacity: isDimmed ? 0.4 : 1,
+                y: hovered || isExpanded || isDimmed ? 0 : [0, 6, 0],
+              }
+        }
+        transition={
+          reducedMotion
+            ? {}
+            : {
+                ...tapTransition,
+                y:
+                  hovered || isExpanded || isDimmed
+                    ? { duration: 0.35, ease: theme.easing.calm }
+                    : { duration: 8, repeat: Infinity, ease: "easeInOut" },
+              }
+        }
+        variants={reducedMotion ? {} : cardHover}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        {accentFill && (
+          <motion.div
+            className="pointer-events-none absolute inset-0 rounded-sm"
+            style={{ backgroundColor: "var(--theme-accent)" }}
+            initial={false}
+            animate={{ opacity: isExpanded ? (hovered ? 0.14 : 0.1) : hovered ? 0.08 : 0 }}
+            transition={{ duration: theme.timing.fill, ease: theme.easing.calm }}
+          />
         )}
-        {children}
-      </div>
-    </motion.section>
+        {background && <div className="absolute inset-0 z-0">{background}</div>}
+        <svg
+          ref={borderRef}
+          className="pointer-events-none absolute inset-0 z-[5]"
+          width={width}
+          height={height}
+          aria-hidden
+        />
+        <div className="relative z-10 p-6">
+          {title && (
+            <h2
+              className={`mb-4 text-sm font-semibold uppercase tracking-wider ${
+                isExpanded ? "text-[var(--theme-accent)]" : "text-[var(--theme-base-muted)]"
+              }`}
+            >
+              {title}
+            </h2>
+          )}
+          {children}
+        </div>
+      </motion.section>
+    </div>
   );
 }
