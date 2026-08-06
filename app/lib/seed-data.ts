@@ -55,7 +55,7 @@ export const projects: Project[] = [
       "Bilal Community Platform is the operational backbone for an Australian Muslim community organization, replacing spreadsheets and manual processes with a proper membership system. Members register, verify via OTP, and pay recurring dues through Stripe; admins manage events, track donations, and run fundraising campaigns from a single dashboard. I built the Spring Boot API end-to-end — the OTP authentication flow, Liquibase-managed schema, Stripe billing integration with automated grace-period reminders, and the role-based permission system that powers the admin and member portals.",
     tags: ["Java", "Spring Boot", "PostgreSQL", "Liquibase", "Stripe", "Twilio"],
     href: "https://bilalcommunity.com.au",
-    image: "/gogerami.png",
+    image: "/bilal.png",
     links: [
       { label: "Live site", href: "https://bilalcommunity.com.au" },
       { label: "API", href: "https://api.bilalcommunity.com.au" },
@@ -105,7 +105,7 @@ export const projects: Project[] = [
       "Fund-ly is an AI-assisted crowd-investment platform that connects entrepreneurs raising capital with investors looking to fund early-stage ventures. Entrepreneurs submit projects with milestones and documentation, investors get AI-generated credibility scores and personalized recommendations, and both sides negotiate through NDAs, pledges, and a real-time chat before funds move via Chapa. I worked on the backend's verification pipeline (OCR, face match, and liveness checks for KYC), the milestone-based funding engine, and the WebSocket chat that lets investors and entrepreneurs communicate directly inside the platform.",
     tags: ["Java", "Spring Boot", "PostgreSQL", "JWT", "WebSocket", "Chapa"],
     href: "https://fund-ly.app",
-    image: "/gogerami.png",
+    image: "/fundly.png",
     links: [
       { label: "Live app", href: "https://fund-ly.app" },
       {
@@ -135,7 +135,7 @@ export const projects: Project[] = [
       "The ECP Registration Bot automates course enrollment for Ethio College Prep entirely inside Telegram, replacing a manual, spreadsheet-driven signup process. Prospective students chat with the bot to submit their details, apply an ambassador discount code, upload a payment receipt, and instantly receive a one-time invite link to the correct course group — whether that's an online cohort or an in-person location like Bole or BITS College. I built the full conversational state machine with Telegraf, wired up Cloudinary for receipt storage, and set up the Express webhook server used in production.",
     tags: ["Node.js", "Telegraf", "Express", "MongoDB", "Cloudinary"],
     href: "",
-    image: "/gogerami.png",
+    image: "/ecp.png",
     role: "Backend Developer",
     challenge:
       "A college prep company processed hundreds of course registrations manually via spreadsheets and messaging — slow, error-prone, and unable to validate ambassador discount codes or payment receipts at scale.",
@@ -158,7 +158,7 @@ export const projects: Project[] = [
       "The Ethio College Prep website is the public face of the company's SAT, IELTS, and college counseling programs — course pages, a blog, and online registration all built on Next.js. Behind the scenes, an admin CMS protected with NextAuth lets non-technical staff manage tutors, testimonials, FAQs, and scholarship announcements without touching code. I built the registration API routes backed by MongoDB, the admin authentication flow, and the Cloudinary-powered media pipeline used across the course and blog pages.",
     tags: ["Next.js", "TypeScript", "MongoDB", "NextAuth", "Tailwind"],
     href: "https://www.ethiocollegeprep.com",
-    image: "/gogerami.png",
+    image: "/ecp.png",
     links: [{ label: "Live site", href: "https://www.ethiocollegeprep.com" }],
     role: "Full-Stack Developer",
     challenge:
