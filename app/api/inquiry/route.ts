@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getMongoClient } from "@/app/lib/mongodb";
 
 export type InquiryBody = {
   name: string;
@@ -18,7 +19,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Optional: validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
       return NextResponse.json(
@@ -27,15 +27,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Send email, store in DB, or forward to a service.
-    // For now we just acknowledge receipt.
-    console.info("[Inquiry]", { name: name.trim(), email: email.trim(), description: description.trim() });
+    if (!process.env.MONGODB_URI) {
+      console.error("[Inquiry] MONGODB_URI is not configured.");
+      return NextResponse.json(
+        { error: "Feedback service is temporarily unavailable." },
+        { status: 503 }
+      );
+    }
+
+    const client = await getMongoClient();
+    const db = client.db("portfolio");
+    await db.collection("feedback").insertOne({
+      name: name.trim(),
+      email: email.trim(),
+      description: description.trim(),
+      createdAt: new Date(),
+    });
 
     return NextResponse.json({ ok: true, message: "Thanks for your message." });
-  } catch {
+  } catch (err) {
+    console.error("[Inquiry]", err);
     return NextResponse.json(
-      { error: "Invalid request body." },
-      { status: 400 }
+      { error: "Failed to save your message. Please try again." },
+      { status: 500 }
     );
   }
 }

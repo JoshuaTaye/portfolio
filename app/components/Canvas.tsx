@@ -234,6 +234,7 @@ export function Canvas() {
           positions={positions}
           containerRef={containerRef}
           prevPathKeyRef={prevPathKeyRef}
+          inquiryFormOpen={inquiryFormOpen}
         />
         <TransformComponent wrapperStyle={{ width: "100%", height: "100%", cursor: "grab" }} contentStyle={contentStyle}>
           <div className="relative canvas-grab" style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }}>
@@ -450,10 +451,11 @@ export function Canvas() {
                 const bw = 120;
                 const bh = 40;
                 const gap = 12;
-                const nameY = cy - 140;
-                const emailY = cy - 140 + fh + gap;
-                const descY = cy - 140 + (fh + gap) * 2;
-                const btnY = cy - 140 + (fh + gap) * 2 + dh + gap;
+                const totalH = fh + gap + fh + gap + dh + gap + bh;
+                const nameY = cy - totalH / 2;
+                const emailY = nameY + fh + gap;
+                const descY = emailY + fh + gap;
+                const btnY = descY + dh + gap;
                 const left = cx - fw / 2;
                 const btnLeft = cx - bw / 2;
                 const submitInquiry = async () => {
@@ -789,20 +791,44 @@ function PanToExpandedNode({
   positions,
   containerRef,
   prevPathKeyRef,
+  inquiryFormOpen,
 }: {
   expandedPath: string[];
   positions: Map<string, { x: number; y: number }>;
   containerRef: React.RefObject<HTMLDivElement | null>;
   prevPathKeyRef: React.MutableRefObject<string>;
+  inquiryFormOpen: boolean;
 }) {
   const ctx = useTransformContext();
+  // Derive a stable key so inquiry open/close re-pans without changing dep array shape mid-session.
+  const pathKey = `${expandedPath.join(",")}|inquiry:${inquiryFormOpen ? "1" : "0"}`;
   useEffect(() => {
-    const pathKey = expandedPath.join(",");
     if (pathKey === prevPathKeyRef.current) return;
     prevPathKeyRef.current = pathKey;
 
-    const activeId = expandedPath.at(-1) ?? "intro";
-    const targetPos = positions.get(activeId);
+    const pathIds = pathKey.split("|")[0];
+    const formOpen = pathKey.endsWith("|inquiry:1");
+    const activeId = pathIds ? pathIds.split(",").at(-1) || "intro" : "intro";
+    let targetPos = positions.get(activeId);
+
+    // Contact + Send feedback: frame both so the feedback card isn't clipped at the top.
+    if (pathIds === "contact" && !formOpen) {
+      const contactPos = positions.get("contact");
+      const inquiryPos = positions.get("inquiry");
+      if (contactPos && inquiryPos) {
+        targetPos = {
+          x: (contactPos.x + inquiryPos.x) / 2,
+          y: (contactPos.y + inquiryPos.y) / 2,
+        };
+      }
+    }
+
+    // Feedback form open: center on the name / email / message stack.
+    if (pathIds.startsWith("contact") && formOpen) {
+      const inquiryPos = positions.get("inquiry");
+      if (inquiryPos) targetPos = inquiryPos;
+    }
+
     const container = containerRef.current;
     const ref = ctx?.getContext?.();
     if (!targetPos || !container || !ref?.setTransform) return;
@@ -812,7 +838,7 @@ function PanToExpandedNode({
     const newX = w / 2 - targetPos.x * scale;
     const newY = h / 2 - targetPos.y * scale;
     ref.setTransform(newX, newY, scale, 500, "easeOutCubic");
-  }, [expandedPath, positions, containerRef, prevPathKeyRef]);
+  }, [pathKey, positions, containerRef, prevPathKeyRef]);
   return null;
 }
 
