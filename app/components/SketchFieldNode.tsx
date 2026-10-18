@@ -16,6 +16,8 @@ type SketchFieldNodeProps = {
   multiline?: boolean;
   placeholder?: string;
   type?: "text" | "email";
+  autoComplete?: string;
+  maxLength?: number;
   /** For explosion animation order */
   index?: number;
   darkMode?: boolean;
@@ -34,6 +36,8 @@ export function SketchFieldNode({
   multiline = false,
   placeholder = "",
   type = "text",
+  autoComplete,
+  maxLength,
   index = 0,
   darkMode = false,
 }: SketchFieldNodeProps) {
@@ -109,6 +113,7 @@ export function SketchFieldNode({
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
+                maxLength={maxLength}
                 rows={3}
                 className="min-h-0 w-full resize-none rounded border-0 bg-transparent p-0 text-sm leading-snug text-[var(--theme-base)] placeholder:text-[var(--theme-base-muted)] focus:outline-none focus:ring-0"
                 style={{ color: "var(--theme-base)", minHeight: height - 28 }}
@@ -117,6 +122,8 @@ export function SketchFieldNode({
               <input
                 id={inputId}
                 type={type}
+                autoComplete={autoComplete}
+                maxLength={maxLength}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}

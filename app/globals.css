@@ -1,7 +1,9 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", sans-serif;
+  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* Handwritten accent face (Architects Daughter): section titles and annotations. */
+  --font-hand: var(--font-hand-face), "Bradley Hand", cursive;
 }
 
 :root {
@@ -14,6 +16,8 @@
   --theme-base-muted: #6b6b6b;
   --theme-accent: #7d9a8a;
   --theme-accent-hover: #6a8576;
+  /* Accent for text: darker so it meets WCAG AA (≈5.7:1 on white). */
+  --theme-accent-ink: #4f6e5e;
   --theme-pencil: #2d2d2d;
   --theme-pencil-light: #9a9a9a;
   
@@ -21,6 +25,17 @@
   --theme-card-shadow-hover: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
   --theme-card-shadow-expanded: drop-shadow(0 0 14px rgba(125, 154, 138, 0.35)) drop-shadow(0 4px 10px rgba(125, 154, 138, 0.18));
   --theme-card-expanded-fill: rgba(125, 154, 138, 0.1);
+  --theme-error: #b42318;
+
+  /* Hand-drawn borders (rough.js outlines, generated once) used by the .sketch utilities below. */
+  --sk-faint: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M1.4 5.2 C7.6 3.0, 15.0 1.0, 36.3 3.2 M2.9 3.2 C11.5 2.3, 21.6 2.7, 37.0 2.2 M36.6 5.0 C34.7 12.5, 36.3 27.6, 36.0 38.2 M36.1 2.1 C36.3 13.1, 36.0 25.8, 37.7 38.1 M37.7 38.6 C27.2 35.0, 17.3 38.6, 4.1 36.4 M37.9 36.5 C27.6 37.0, 20.6 36.6, 2.0 36.2 M4.9 36.2 C1.8 27.8, 4.4 19.0, 1.1 1.4 M3.9 38.1 C3.3 27.3, 2.9 18.3, 2.6 3.7' stroke='%23c4c4c4' stroke-width='1.1' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --sk-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M0.7 1.6 C11.8 3.4, 16.7 3.1, 35.2 1.6 M2.4 2.8 C13.8 3.0, 27.5 3.0, 36.9 2.2 M35.6 2.7 C36.9 14.7, 37.9 25.5, 39.0 39.2 M37.1 3.5 C36.7 12.5, 38.1 22.2, 38.0 37.5 M36.3 35.3 C25.6 35.8, 16.2 36.0, 4.0 38.4 M36.3 38.1 C28.4 37.1, 20.8 37.3, 3.7 37.3 M1.8 34.7 C4.3 31.4, 4.2 24.3, 3.2 2.5 M2.5 38.1 C3.5 24.6, 3.0 13.1, 1.9 4.1' stroke='%239a9a9a' stroke-width='1.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --sk-ink: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M2.0 3.6 C9.6 1.7, 17.4 4.5, 38.9 4.3 M2.5 2.4 C12.1 3.8, 20.9 2.2, 37.5 2.8 M37.0 4.4 C35.0 10.7, 36.2 16.9, 34.8 37.8 M36.9 2.6 C36.1 13.8, 37.6 23.1, 36.2 37.7 M38.9 38.4 C31.7 39.1, 21.0 35.5, 2.9 35.6 M36.7 37.2 C28.2 36.1, 17.9 36.7, 3.2 37.6 M1.4 37.4 C3.7 26.0, 5.4 12.8, 2.6 3.4 M4.0 38.1 C2.9 25.2, 3.6 15.0, 2.7 4.0' stroke='%232d2d2d' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --sk-accent: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M3.3 1.1 C12.0 0.9, 18.2 2.1, 38.1 2.4 M2.6 1.9 C10.4 2.3, 16.6 3.7, 38.1 3.3 M38.4 1.6 C37.7 13.6, 34.4 26.6, 35.2 36.4 M36.6 3.9 C37.7 12.8, 37.0 24.0, 36.7 37.8 M37.0 36.9 C26.4 37.7, 16.8 35.0, 1.7 37.4 M37.1 36.2 C25.7 35.9, 12.7 36.9, 2.8 37.9 M1.1 35.4 C3.0 27.3, 2.0 19.4, 2.1 4.2 M3.2 38.1 C2.3 25.9, 4.1 16.8, 3.4 3.9' stroke='%237d9a8a' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --sk-fill: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M3.9 2.9 L36.2 3.8 L39.0 36.6 L1.3 35.5' stroke='none' stroke-width='0' fill='%231a1a1a' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M0.7 1.6 C11.8 3.4, 16.7 3.1, 35.2 1.6 M2.4 2.8 C13.8 3.0, 27.5 3.0, 36.9 2.2 M35.6 2.7 C36.9 14.7, 37.9 25.5, 39.0 39.2 M37.1 3.5 C36.7 12.5, 38.1 22.2, 38.0 37.5 M36.3 35.3 C25.6 35.8, 16.2 36.0, 4.0 38.4 M36.3 38.1 C28.4 37.1, 20.8 37.3, 3.7 37.3 M1.8 34.7 C4.3 31.4, 4.2 24.3, 3.2 2.5 M2.5 38.1 C3.5 24.6, 3.0 13.1, 1.9 4.1' stroke='%231a1a1a' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --sk-fill-alt: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M2.1 1.5 L37.1 4.9 L39.1 36.3 L4.5 36.1' stroke='none' stroke-width='0' fill='%231a1a1a' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M2.7 0.9 C10.5 1.3, 15.6 3.0, 39.0 4.2 M1.9 3.1 C13.0 3.8, 22.8 2.6, 37.7 2.2 M36.2 2.7 C38.2 10.2, 38.1 14.8, 37.0 37.0 M38.0 2.6 C36.2 15.9, 35.7 29.1, 36.3 37.1 M37.2 36.0 C24.4 36.8, 14.0 36.2, 1.0 35.5 M37.3 37.8 C28.6 37.3, 20.6 37.0, 2.5 38.1 M2.3 38.8 C3.9 24.5, 4.1 10.2, 4.9 3.3 M1.9 38.1 C3.1 25.6, 2.7 11.3, 3.2 3.8' stroke='%231a1a1a' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --sk-circle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M23.9 3.2 C27.3 3.7, 30.6 7.5, 32.7 10.5 C34.8 13.6, 36.3 17.8, 36.2 21.4 C36.1 24.9, 34.6 29.4, 32.2 32.0 C29.8 34.6, 25.1 36.4, 21.6 36.9 C18.2 37.4, 14.5 36.9, 11.6 34.8 C8.6 32.7, 5.0 27.9, 3.9 24.4 C2.7 20.9, 3.4 17.0, 4.8 13.6 C6.1 10.3, 8.7 6.0, 12.0 4.3 C15.4 2.6, 22.2 3.6, 24.6 3.5 C27.1 3.4, 26.8 3.5, 26.9 3.8 M15.2 2.3 C18.2 1.1, 23.0 3.0, 26.1 4.7 C29.1 6.4, 31.8 9.1, 33.5 12.4 C35.1 15.7, 36.8 21.1, 36.1 24.6 C35.4 28.1, 32.3 31.6, 29.3 33.5 C26.3 35.3, 21.5 35.9, 18.3 35.8 C15.0 35.7, 12.5 35.1, 10.0 32.9 C7.5 30.6, 3.8 26.1, 3.1 22.3 C2.5 18.5, 3.9 13.0, 6.0 10.0 C8.2 7.1, 14.2 5.6, 16.1 4.6 C17.9 3.5, 17.2 3.5, 17.4 3.7' stroke='%239a9a9a' stroke-width='1.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --sk-circle-accent: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M15.4 3.8 C18.3 2.3, 22.2 2.4, 25.2 3.5 C28.1 4.6, 31.4 7.2, 33.3 10.6 C35.2 14.0, 37.0 20.0, 36.7 23.9 C36.3 27.9, 33.9 32.0, 31.3 34.4 C28.7 36.9, 24.5 38.9, 21.0 38.7 C17.5 38.5, 13.1 35.7, 10.3 33.2 C7.5 30.8, 4.9 27.6, 4.4 24.0 C3.8 20.4, 4.6 15.2, 6.9 11.6 C9.3 8.1, 16.1 4.1, 18.6 2.8 C21.1 1.4, 22.0 3.1, 22.0 3.5 M16.4 1.8 C19.6 0.6, 23.7 1.3, 27.0 3.4 C30.3 5.6, 34.8 10.9, 36.2 14.7 C37.5 18.6, 36.3 23.1, 35.1 26.5 C33.8 29.9, 31.6 33.1, 28.8 35.2 C26.0 37.2, 21.6 39.5, 18.3 38.8 C15.0 38.1, 11.2 34.3, 9.0 31.1 C6.8 27.9, 5.1 23.1, 5.1 19.5 C5.1 16.0, 7.0 12.5, 9.0 9.7 C11.0 6.9, 15.8 3.7, 17.1 2.7 C18.4 1.6, 17.0 3.3, 16.9 3.4' stroke='%237d9a8a' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 /* Dark mode — entirely black bg, light graphite lines */
@@ -34,6 +49,7 @@
   --theme-base-muted: #a8a8a8;
   --theme-accent: #8faa9b;
   --theme-accent-hover: #9eb8ab;
+  --theme-accent-ink: #a7c4b4;
   --theme-pencil: #c4c4c4;
   --theme-pencil-light: #6a6a6a;
   
@@ -41,16 +57,27 @@
   --theme-card-shadow-hover: drop-shadow(0 0 24px rgba(143, 170, 155, 0.15));
   --theme-card-shadow-expanded: drop-shadow(0 0 22px rgba(143, 170, 155, 0.45)) drop-shadow(0 0 40px rgba(143, 170, 155, 0.2));
   --theme-card-expanded-fill: rgba(143, 170, 155, 0.14);
+  --theme-error: #f97066;
+
+  --sk-faint: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M1.4 5.2 C7.6 3.0, 15.0 1.0, 36.3 3.2 M2.9 3.2 C11.5 2.3, 21.6 2.7, 37.0 2.2 M36.6 5.0 C34.7 12.5, 36.3 27.6, 36.0 38.2 M36.1 2.1 C36.3 13.1, 36.0 25.8, 37.7 38.1 M37.7 38.6 C27.2 35.0, 17.3 38.6, 4.1 36.4 M37.9 36.5 C27.6 37.0, 20.6 36.6, 2.0 36.2 M4.9 36.2 C1.8 27.8, 4.4 19.0, 1.1 1.4 M3.9 38.1 C3.3 27.3, 2.9 18.3, 2.6 3.7' stroke='%233e3e3e' stroke-width='1.1' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --sk-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M0.7 1.6 C11.8 3.4, 16.7 3.1, 35.2 1.6 M2.4 2.8 C13.8 3.0, 27.5 3.0, 36.9 2.2 M35.6 2.7 C36.9 14.7, 37.9 25.5, 39.0 39.2 M37.1 3.5 C36.7 12.5, 38.1 22.2, 38.0 37.5 M36.3 35.3 C25.6 35.8, 16.2 36.0, 4.0 38.4 M36.3 38.1 C28.4 37.1, 20.8 37.3, 3.7 37.3 M1.8 34.7 C4.3 31.4, 4.2 24.3, 3.2 2.5 M2.5 38.1 C3.5 24.6, 3.0 13.1, 1.9 4.1' stroke='%236a6a6a' stroke-width='1.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --sk-ink: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M2.0 3.6 C9.6 1.7, 17.4 4.5, 38.9 4.3 M2.5 2.4 C12.1 3.8, 20.9 2.2, 37.5 2.8 M37.0 4.4 C35.0 10.7, 36.2 16.9, 34.8 37.8 M36.9 2.6 C36.1 13.8, 37.6 23.1, 36.2 37.7 M38.9 38.4 C31.7 39.1, 21.0 35.5, 2.9 35.6 M36.7 37.2 C28.2 36.1, 17.9 36.7, 3.2 37.6 M1.4 37.4 C3.7 26.0, 5.4 12.8, 2.6 3.4 M4.0 38.1 C2.9 25.2, 3.6 15.0, 2.7 4.0' stroke='%23c4c4c4' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --sk-accent: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M3.3 1.1 C12.0 0.9, 18.2 2.1, 38.1 2.4 M2.6 1.9 C10.4 2.3, 16.6 3.7, 38.1 3.3 M38.4 1.6 C37.7 13.6, 34.4 26.6, 35.2 36.4 M36.6 3.9 C37.7 12.8, 37.0 24.0, 36.7 37.8 M37.0 36.9 C26.4 37.7, 16.8 35.0, 1.7 37.4 M37.1 36.2 C25.7 35.9, 12.7 36.9, 2.8 37.9 M1.1 35.4 C3.0 27.3, 2.0 19.4, 2.1 4.2 M3.2 38.1 C2.3 25.9, 4.1 16.8, 3.4 3.9' stroke='%238faa9b' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --sk-fill: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M3.9 2.9 L36.2 3.8 L39.0 36.6 L1.3 35.5' stroke='none' stroke-width='0' fill='%23e8e8e8' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M0.7 1.6 C11.8 3.4, 16.7 3.1, 35.2 1.6 M2.4 2.8 C13.8 3.0, 27.5 3.0, 36.9 2.2 M35.6 2.7 C36.9 14.7, 37.9 25.5, 39.0 39.2 M37.1 3.5 C36.7 12.5, 38.1 22.2, 38.0 37.5 M36.3 35.3 C25.6 35.8, 16.2 36.0, 4.0 38.4 M36.3 38.1 C28.4 37.1, 20.8 37.3, 3.7 37.3 M1.8 34.7 C4.3 31.4, 4.2 24.3, 3.2 2.5 M2.5 38.1 C3.5 24.6, 3.0 13.1, 1.9 4.1' stroke='%23e8e8e8' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --sk-fill-alt: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M2.1 1.5 L37.1 4.9 L39.1 36.3 L4.5 36.1' stroke='none' stroke-width='0' fill='%23e8e8e8' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M2.7 0.9 C10.5 1.3, 15.6 3.0, 39.0 4.2 M1.9 3.1 C13.0 3.8, 22.8 2.6, 37.7 2.2 M36.2 2.7 C38.2 10.2, 38.1 14.8, 37.0 37.0 M38.0 2.6 C36.2 15.9, 35.7 29.1, 36.3 37.1 M37.2 36.0 C24.4 36.8, 14.0 36.2, 1.0 35.5 M37.3 37.8 C28.6 37.3, 20.6 37.0, 2.5 38.1 M2.3 38.8 C3.9 24.5, 4.1 10.2, 4.9 3.3 M1.9 38.1 C3.1 25.6, 2.7 11.3, 3.2 3.8' stroke='%23e8e8e8' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --sk-circle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M23.9 3.2 C27.3 3.7, 30.6 7.5, 32.7 10.5 C34.8 13.6, 36.3 17.8, 36.2 21.4 C36.1 24.9, 34.6 29.4, 32.2 32.0 C29.8 34.6, 25.1 36.4, 21.6 36.9 C18.2 37.4, 14.5 36.9, 11.6 34.8 C8.6 32.7, 5.0 27.9, 3.9 24.4 C2.7 20.9, 3.4 17.0, 4.8 13.6 C6.1 10.3, 8.7 6.0, 12.0 4.3 C15.4 2.6, 22.2 3.6, 24.6 3.5 C27.1 3.4, 26.8 3.5, 26.9 3.8 M15.2 2.3 C18.2 1.1, 23.0 3.0, 26.1 4.7 C29.1 6.4, 31.8 9.1, 33.5 12.4 C35.1 15.7, 36.8 21.1, 36.1 24.6 C35.4 28.1, 32.3 31.6, 29.3 33.5 C26.3 35.3, 21.5 35.9, 18.3 35.8 C15.0 35.7, 12.5 35.1, 10.0 32.9 C7.5 30.6, 3.8 26.1, 3.1 22.3 C2.5 18.5, 3.9 13.0, 6.0 10.0 C8.2 7.1, 14.2 5.6, 16.1 4.6 C17.9 3.5, 17.2 3.5, 17.4 3.7' stroke='%236a6a6a' stroke-width='1.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --sk-circle-accent: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M15.4 3.8 C18.3 2.3, 22.2 2.4, 25.2 3.5 C28.1 4.6, 31.4 7.2, 33.3 10.6 C35.2 14.0, 37.0 20.0, 36.7 23.9 C36.3 27.9, 33.9 32.0, 31.3 34.4 C28.7 36.9, 24.5 38.9, 21.0 38.7 C17.5 38.5, 13.1 35.7, 10.3 33.2 C7.5 30.8, 4.9 27.6, 4.4 24.0 C3.8 20.4, 4.6 15.2, 6.9 11.6 C9.3 8.1, 16.1 4.1, 18.6 2.8 C21.1 1.4, 22.0 3.1, 22.0 3.5 M16.4 1.8 C19.6 0.6, 23.7 1.3, 27.0 3.4 C30.3 5.6, 34.8 10.9, 36.2 14.7 C37.5 18.6, 36.3 23.1, 35.1 26.5 C33.8 29.9, 31.6 33.1, 28.8 35.2 C26.0 37.2, 21.6 39.5, 18.3 38.8 C15.0 38.1, 11.2 34.3, 9.0 31.1 C6.8 27.9, 5.1 23.1, 5.1 19.5 C5.1 16.0, 7.0 12.5, 9.0 9.7 C11.0 6.9, 15.8 3.7, 17.1 2.7 C18.4 1.6, 17.0 3.3, 16.9 3.4' stroke='%238faa9b' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 html {
   scroll-behavior: smooth;
+  /* Keep anchored sections clear of the sticky header. */
+  scroll-padding-top: 4.5rem;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -79,31 +106,192 @@ body {
 }
 
 
-/* Global transitions for theme variables */
-* {
-  transition-property: background-color, border-color, color, fill, stroke, filter, --theme-background, --theme-card-bg, --theme-base, --theme-base-muted, --theme-pencil, --theme-pencil-light;
-  transition-duration: 0.8s;
-  transition-timing-function: ease;
-}
-
-/* Tech marquee: infinite vertical scroll, bottom to top */
-.tech-marquee-track {
-  animation: techMarqueeScroll 45s linear infinite !important;
-  transition: none !important;
-  will-change: transform;
-}
-
-.tech-marquee-track:hover {
-  animation-play-state: paused !important;
-}
-
-@keyframes techMarqueeScroll {
-  from {
-    transform: translateY(0);
+/* Visitors who last chose the canvas on a wide screen: hide the scroll page before paint
+   (class set in layout.tsx) so it doesn't flash before the canvas mounts. */
+@media (min-width: 1024px) {
+  .layout-canvas .scroll-layout-ssr {
+    display: none;
   }
-  to {
-    transform: translateY(calc(-1 * var(--marquee-shift, 50%)));
-  }
+}
+
+/* Pencil underline under section headings; draws itself when scrolled into view. */
+.pencil-underline {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 0.6rem;
+  overflow: visible;
+}
+.pencil-underline path {
+  fill: none;
+  stroke: var(--theme-accent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 0.9s cubic-bezier(0.4, 0, 0.2, 1) 0.15s;
+}
+.pencil-underline.is-drawn path,
+html:not(.js) .pencil-underline path {
+  stroke-dashoffset: 0;
+}
+
+/*
+ * Pencil borders for buttons, chips, inputs and boxes. Each is a rough.js outline used as a
+ * 9-slice border-image: the hand-drawn corners keep their shape at any size and the edges
+ * stretch, so it costs nothing at runtime. The 1px transparent border keeps layout unchanged.
+ */
+.sketch,
+.sketch-faint,
+.sketch-strong,
+.sketch-fill,
+.sketch-round {
+  border: 1px solid transparent;
+  border-image: var(--sk-line) 10 / 10px / 1px stretch;
+}
+.sketch-faint {
+  border-image-source: var(--sk-faint);
+}
+.sketch-strong {
+  border-image-source: var(--sk-ink);
+}
+/* Primary actions: a solid, hand-drawn fill instead of a background. */
+.sketch-fill {
+  border-image: var(--sk-fill) 10 fill / 10px / 1px stretch;
+  background: none;
+}
+.sketch-round {
+  border-image: var(--sk-circle) 20 / 50% / 1px stretch;
+}
+/* Small things (chips, kbd): tighter corners so they don't crowd the text. */
+/* Static accent outline, for badges and labels. */
+.sketch-accent {
+  border-image-source: var(--sk-accent);
+}
+.sketch-sm {
+  border-image-width: 7px;
+}
+/* Interactive variants redraw in the accent colour on hover, focus or when active. */
+.sketch-hover:hover,
+.sketch-hover:focus-visible,
+.sketch-hover[aria-current="true"],
+.sketch-hover[aria-pressed="true"],
+.sketch-focus:focus,
+.sketch-focus:focus-within {
+  border-image-source: var(--sk-accent);
+}
+.sketch-fill.sketch-hover:hover,
+.sketch-fill.sketch-hover:focus-visible {
+  border-image-source: var(--sk-fill-alt);
+}
+.sketch-round.sketch-hover:hover,
+.sketch-round.sketch-hover:focus-visible {
+  border-image-source: var(--sk-circle-accent);
+}
+
+/* Card and modal outlines (SketchBorder): the pencil draws them in once they scroll into view. */
+.sketch-draw path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition:
+    stroke-dashoffset 0.5s cubic-bezier(0.45, 0, 0.55, 1),
+    stroke 0.3s;
+}
+/* One edge after another, the way a pencil goes round a box. */
+.sketch-draw g:nth-child(2) path {
+  transition-delay: 0.4s, 0s;
+}
+.sketch-draw g:nth-child(3) path {
+  transition-delay: 0.8s, 0s;
+}
+.sketch-draw g:nth-child(4) path {
+  transition-delay: 1.2s, 0s;
+}
+.sketch-draw.is-drawn path,
+html:not(.js) .sketch-draw path {
+  stroke-dashoffset: 0;
+}
+.sketch-frame:hover .sketch-draw path,
+.sketch-frame:focus-within .sketch-draw path {
+  stroke: var(--theme-accent);
+}
+
+/* A strip of masking tape, for screenshots "taped" into the page. Ragged ends via clip-path. */
+.tape {
+  position: absolute;
+  z-index: 2;
+  width: 5rem;
+  height: 1.5rem;
+  background: color-mix(in srgb, var(--theme-accent) 38%, transparent);
+  clip-path: polygon(3% 0, 97% 0, 100% 22%, 96% 45%, 100% 70%, 97% 100%, 3% 100%, 0 76%, 4% 52%, 0 28%);
+  pointer-events: none;
+}
+
+/* Highlighter swipe behind key phrases in the bio; sweeps left to right once in view. */
+.marker {
+  color: var(--theme-base);
+  background-color: transparent;
+  background-image: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--theme-accent) 22%, transparent),
+    color-mix(in srgb, var(--theme-accent) 42%, transparent) 0.3em,
+    color-mix(in srgb, var(--theme-accent) 36%, transparent) calc(100% - 0.3em),
+    color-mix(in srgb, var(--theme-accent) 18%, transparent)
+  );
+  background-repeat: no-repeat;
+  background-position: 0 92%;
+  background-size: 0% 0.72em;
+  border-radius: 0.2em 0.5em 0.25em 0.45em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  transition: background-size 0.8s cubic-bezier(0.45, 0, 0.2, 1);
+}
+.is-marked .marker,
+.marker.is-marked,
+html:not(.js) .marker {
+  background-size: 100% 0.72em;
+}
+.is-marked p:nth-child(2) .marker {
+  transition-delay: 0.35s;
+}
+.is-marked p:nth-child(3) .marker {
+  transition-delay: 0.7s;
+}
+
+/* Soft accent wash that spreads from the top-left corner on hover, like a marker fill. */
+.scribble-fill {
+  position: relative;
+  isolation: isolate;
+}
+.scribble-fill::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--theme-accent);
+  opacity: 0.09;
+  clip-path: circle(0% at 0% 0%);
+  transition: clip-path 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+.scribble-fill:hover::before,
+.scribble-fill:focus-visible::before,
+.scribble-fill:focus-within::before {
+  clip-path: circle(150% at 0% 0%);
+}
+
+/* Scroll reveal: content is only hidden once JS has run (`.js` is set in layout.tsx),
+   so server-rendered HTML and no-JS visitors always see it. */
+.js .reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.55s cubic-bezier(0.25, 0.1, 0.25, 1), transform 0.55s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.js .reveal.is-visible {
+  opacity: 1;
+  transform: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -113,9 +301,5 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-  }
-
-  .tech-marquee-track {
-    animation: none !important;
   }
 }

@@ -17,6 +17,14 @@ const LEVEL_4_RADIUS = 260;
 /** Arc spread in radians (270° = wide arc into space, not full circle). */
 const ARC_SPREAD = (3 / 4) * Math.PI * 2;
 
+/** Spread of a root's children when the arc points away from the intro card (220°). */
+const ROOT_OUTWARD_SPREAD = (11 / 18) * Math.PI * 2;
+/** Spread of nested children: tighter for a few cards, wider for many. */
+const NESTED_SPREAD_FEW = Math.PI * 0.6;
+const NESTED_SPREAD_MANY = Math.PI * 0.85;
+/** Minimum distance between neighbouring child centers so cards never touch. */
+const MIN_CHILD_GAP = 300;
+
 const CARD_W = 260;
 const CARD_H = 140;
 
@@ -53,17 +61,18 @@ function radiusForDepth(depth: number, childCount: number): number {
 /** Padding between cards so they don’t touch when nudged. */
 const CARD_PAD = 24;
 
-const ROOT_SIZES: Record<string, { w: number; h: number }> = {
+/** Sizes of the root section cards; Canvas renders them at exactly these sizes. */
+export const ROOT_SIZES = {
   intro: { w: 580, h: 320 },
   projects: { w: 460, h: 240 },
   about: { w: 440, h: 200 },
-  contact: { w: 360, h: 180 },
-  skills: { w: 420, h: 200 },
-  metrics: { w: 420, h: 240 },
-};
+  contact: { w: 360, h: 272 },
+} as const satisfies Record<string, { w: number; h: number }>;
+
+const ROOT_SIZE_BY_ID: Record<string, { w: number; h: number }> = ROOT_SIZES;
 
 function cardRect(id: string, pos: { x: number; y: number }) {
-  const size = ROOT_SIZES[id] || { w: CARD_W, h: CARD_H };
+  const size = ROOT_SIZE_BY_ID[id] || { w: CARD_W, h: CARD_H };
   return {
     left: pos.x - size.w / 2 - CARD_PAD / 2,
     right: pos.x + size.w / 2 + CARD_PAD / 2,
@@ -79,7 +88,7 @@ function rectsOverlap(
   return !(a.right < b.left || b.right < a.left || a.bottom < b.top || b.bottom < a.top);
 }
 
-const ROOT_IDS = new Set(["intro", "projects", "about", "contact", "skills", "metrics"]);
+const ROOT_IDS = new Set(Object.keys(ROOT_SIZES));
 
 /** Nudge positions so no two cards overlap. Push earlier nodes away from later (newly expanded) ones so new nodes stay visible; roots stay fixed. */
 function resolveOverlaps(positions: PositionMap, order: string[]): void {
@@ -101,8 +110,8 @@ function resolveOverlaps(positions: PositionMap, order: string[]): void {
         const len = Math.hypot(dx, dy) || 1;
         
         // Approximate collision radius based on max dimension of each node
-        const sizeA = ROOT_SIZES[idA] || { w: CARD_W, h: CARD_H };
-        const sizeB = ROOT_SIZES[idB] || { w: CARD_W, h: CARD_H };
+        const sizeA = ROOT_SIZE_BY_ID[idA] || { w: CARD_W, h: CARD_H };
+        const sizeB = ROOT_SIZE_BY_ID[idB] || { w: CARD_W, h: CARD_H };
         const radiusA = Math.max(sizeA.w, sizeA.h) / 2;
         const radiusB = Math.max(sizeB.w, sizeB.h) / 2;
         
@@ -183,6 +192,26 @@ export function getCardPositions(
           );
           positions.set(id, childPositions[j]);
         }
+        order.push(id);
+      });
+    } else if (childIds.length > 1) {
+      // Fan children away from where the parent came from (the intro card for roots,
+      // the grandparent otherwise) so they open into empty space instead of back over the canvas.
+      const origin = i === 0 ? rootCenters.intro : positions.get(expandedPath[i - 1]);
+      const direction = origin ? Math.atan2(parentPos.y - origin.y, parentPos.x - origin.x) : -Math.PI / 2;
+      const spread = i === 0 ? ROOT_OUTWARD_SPREAD : childIds.length <= 3 ? NESTED_SPREAD_FEW : NESTED_SPREAD_MANY;
+      const step = spread / (childIds.length - 1);
+      const fanRadius = Math.max(radius, MIN_CHILD_GAP / (2 * Math.sin(step / 2)));
+      const childPositions = radialPositions(
+        parentPos.x,
+        parentPos.y,
+        childIds.length,
+        fanRadius,
+        direction - spread / 2,
+        spread
+      );
+      childIds.forEach((id, j) => {
+        positions.set(id, childPositions[j]);
         order.push(id);
       });
     } else {

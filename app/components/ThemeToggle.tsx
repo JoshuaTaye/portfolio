@@ -5,21 +5,33 @@ import { SunnyIcon, NightIcon } from "./ThemeIcons";
 
 type ThemeToggleProps = {
   darkMode: boolean;
-  toggle: () => void;
+  /** Receives the button's center so the theme reveal can grow from it. */
+  toggle: (origin: { x: number; y: number }) => void;
+  /** "floating" pins it to the top-right corner (canvas view); "inline" sits in a header. */
+  variant?: "floating" | "inline";
 };
 
-export function ThemeToggle({ darkMode, toggle }: ThemeToggleProps) {
+export function ThemeToggle({ darkMode, toggle, variant = "floating" }: ThemeToggleProps) {
   return (
     <button
-      onClick={toggle}
-      className={`fixed top-3 left-3 z-50 flex h-9 w-9 items-center justify-center rounded-full border bg-opacity-20 backdrop-blur-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 sm:left-auto sm:right-4 sm:top-4 sm:h-10 sm:w-10 ${
-        darkMode
-          ? "border-gray-700 bg-black text-white hover:border-white focus:ring-white focus:ring-offset-black"
-          : "border-gray-300 bg-white text-black hover:border-black focus:ring-black focus:ring-offset-white"
-      }`}
+      onClick={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        toggle({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+      }}
+      className={
+        variant === "floating"
+          ? `fixed right-4 top-4 z-50 h-10 w-10 sketch-round sketch-hover flex shrink-0 items-center justify-center rounded-full backdrop-blur-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
+              darkMode
+                ? "bg-black text-white focus-visible:ring-white focus-visible:ring-offset-black"
+                : "bg-white text-black focus-visible:ring-black focus-visible:ring-offset-white"
+            }`
+          : // Inline: a borderless icon button, matching the other header actions.
+            "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--theme-base-muted)] transition-colors hover:bg-[var(--theme-accent)]/12 hover:text-[var(--theme-base)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]"
+      }
       aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+      title={darkMode ? "Light mode" : "Dark mode"}
     >
-      <div className="relative h-5 w-5 overflow-hidden sm:h-6 sm:w-6">
+      <div className={`relative overflow-hidden ${variant === "floating" ? "h-6 w-6" : "h-5 w-5"}`}>
         <motion.div
           initial={false}
           animate={{

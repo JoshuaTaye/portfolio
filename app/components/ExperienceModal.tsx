@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
+import { useDialogFocus } from "@/app/lib/use-dialog-focus";
 import { AnimatePresence, motion } from "framer-motion";
 import type { Experience } from "@/app/lib/seed-data";
 import { theme } from "@/app/lib/theme";
@@ -13,19 +14,9 @@ type ExperienceModalProps = {
 
 export function ExperienceModal({ experience, onClose }: ExperienceModalProps) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
 
-  useEffect(() => {
-    if (!experience) return;
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleEscape);
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", handleEscape);
-      document.body.style.overflow = "";
-    };
-  }, [experience, onClose]);
+  useDialogFocus(dialogRef, Boolean(experience), onClose);
 
   return (
     <AnimatePresence>
@@ -42,11 +33,13 @@ export function ExperienceModal({ experience, onClose }: ExperienceModalProps) {
           />
           <div className="fixed inset-0 z-[101] flex items-center justify-center p-4" onClick={onClose}>
             <motion.article
+              ref={dialogRef}
+              tabIndex={-1}
               initial={{ opacity: 0, y: 32, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 32, scale: 0.98 }}
               transition={{ duration: theme.timing.focus, ease: theme.easing.calm }}
-              className="relative w-full max-w-2xl overflow-hidden bg-[var(--theme-card-bg)] shadow-2xl"
+              className="relative max-h-[92svh] w-full max-w-2xl overflow-y-auto bg-[var(--theme-card-bg)] shadow-2xl"
               onClick={(event) => event.stopPropagation()}
               role="dialog"
               aria-modal="true"
@@ -56,7 +49,7 @@ export function ExperienceModal({ experience, onClose }: ExperienceModalProps) {
               <button
                 type="button"
                 onClick={onClose}
-                className="absolute right-3 top-3 z-20 rounded-full border border-[var(--theme-pencil-light)]/50 bg-[var(--theme-card-bg)] p-2 text-[var(--theme-base-muted)] transition-colors hover:border-[var(--theme-accent)] hover:text-[var(--theme-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent)]"
+                className="sketch-round sketch-hover absolute right-3 top-3 z-20 rounded-full bg-[var(--theme-card-bg)] p-2 text-[var(--theme-base-muted)] transition-colors hover:text-[var(--theme-accent-ink)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent)]"
                 aria-label="Close experience details"
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -64,17 +57,17 @@ export function ExperienceModal({ experience, onClose }: ExperienceModalProps) {
                 </svg>
               </button>
               <div ref={contentRef} className="p-6 sm:p-8">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--theme-accent)]">
+                <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--theme-accent-ink)]">
                   Experience
                 </span>
                 <h2 id="experience-modal-title" className="mt-2 pr-9 text-2xl font-bold tracking-tight text-[var(--theme-base)] sm:text-3xl">
                   {experience.role}
                 </h2>
-                <p className="mt-1 text-sm font-medium text-[var(--theme-accent)]">{experience.company}</p>
+                <p className="mt-1 text-sm font-medium text-[var(--theme-accent-ink)]">{experience.company}</p>
                 <p className="mt-1 text-xs uppercase tracking-wider text-[var(--theme-base-muted)]">{experience.period}</p>
 
                 <div className="mt-6 border-t border-[var(--theme-pencil-light)]/30 pt-5">
-                  <h3 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--theme-base-muted)]">
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--theme-base-muted)]">
                     Role overview
                   </h3>
                   <p className="mt-2 text-sm leading-relaxed text-[var(--theme-base-muted)] sm:text-base">
@@ -82,15 +75,28 @@ export function ExperienceModal({ experience, onClose }: ExperienceModalProps) {
                   </p>
                 </div>
 
+                {experience.highlights && experience.highlights.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--theme-base-muted)]">
+                      What I did
+                    </h3>
+                    <ul className="mt-2 flex list-disc flex-col gap-1.5 pl-5 text-sm leading-relaxed text-[var(--theme-base-muted)]">
+                      {experience.highlights.map((highlight) => (
+                        <li key={highlight}>{highlight}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <div className="mt-6">
-                  <h3 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--theme-base-muted)]">
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--theme-base-muted)]">
                     Technologies
                   </h3>
                   <ul className="mt-3 flex flex-wrap gap-2" aria-label="Technologies">
                     {experience.technologies.map((technology) => (
                       <li
                         key={technology}
-                        className="border border-[var(--theme-accent)]/30 bg-[var(--theme-accent)]/10 px-2.5 py-1 text-xs font-medium text-[var(--theme-base)]"
+                        className="sketch sketch-sm sketch-accent px-2.5 py-1 text-xs font-medium text-[var(--theme-base)]"
                       >
                         {technology}
                       </li>

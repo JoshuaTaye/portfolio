@@ -4,23 +4,22 @@ import React, { useRef, useEffect, useState, useCallback, useId } from "react";
 import {
   TransformWrapper,
   TransformComponent,
+  useControls,
   useTransformContext,
 } from "react-zoom-pan-pinch";
 import rough from "roughjs";
-import { motion, AnimatePresence, useInView } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { SectionNode } from "./SectionNode";
 import { SketchEdge } from "./SketchEdge";
 import { SketchCard } from "./SketchCard";
 import { SketchFieldNode } from "./SketchFieldNode";
 import { SketchButtonNode } from "./SketchButtonNode";
-import { ThemeToggle } from "./ThemeToggle";
 import { SocialIcon, isSocialIcon, EmailIcon, PhoneIcon, SendIcon } from "./SocialIcons";
-import { ProjectModal } from "./ProjectModal";
-import { ExperienceModal } from "./ExperienceModal";
-import { BioModal } from "./BioModal";
-import { projects, aboutText, contact, experiences, type Experience, type Project } from "@/app/lib/seed-data";
+import { projects, featuredProjects, aboutText, contact, experiences, hero, type Experience, type Project } from "@/app/lib/seed-data";
 import { getChildrenIds, getNode, getPathToNode } from "@/app/lib/graph-data";
-import { getCardPositions, LAYOUT } from "@/app/lib/canvas-layout";
+import { getCardPositions, LAYOUT, ROOT_SIZES } from "@/app/lib/canvas-layout";
+import { INQUIRY_LIMITS } from "@/app/lib/inquiry";
+import { useInquiryForm } from "@/app/lib/use-inquiry-form";
 import { theme } from "@/app/lib/theme";
 
 /** Very large canvas so panning feels infinite and outermost cards are never cut. */
@@ -31,14 +30,10 @@ const CANVAS_HEIGHT = CANVAS_SIZE;
 const CX = CANVAS_WIDTH / 2;
 const CY = CANVAS_HEIGHT / 2;
 
-const INTRO_W = 580;
-const INTRO_H = 320;
-const PROJECTS_W = 460;
-const PROJECTS_H = 240;
-const ABOUT_W = 440;
-const ABOUT_H = 200;
-const CONTACT_W = 360;
-const CONTACT_H = 272;
+const { w: INTRO_W, h: INTRO_H } = ROOT_SIZES.intro;
+const { w: PROJECTS_W, h: PROJECTS_H } = ROOT_SIZES.projects;
+const { w: ABOUT_W, h: ABOUT_H } = ROOT_SIZES.about;
+const { w: CONTACT_W, h: CONTACT_H } = ROOT_SIZES.contact;
 
 const ROOT_CENTERS: Record<string, { x: number; y: number }> = {
   intro: { x: CX, y: CY - 80 + INTRO_H / 2 },
@@ -48,7 +43,8 @@ const ROOT_CENTERS: Record<string, { x: number; y: number }> = {
 };
 
 /** Top-left positions for root section divs (for absolute positioning). */
-const INTRO_TOP = CY - 80;
+const INTRO_LEFT = CX - INTRO_W / 2;
+const INTRO_TOP = CY - 80 - INTRO_H / 2;
 const PROJECTS_LEFT = CX + INTRO_W / 2 + 80;
 const PROJECTS_TOP = CY - 40 - PROJECTS_H / 2;
 const ABOUT_LEFT = CX - ABOUT_W / 2;
@@ -56,62 +52,177 @@ const ABOUT_TOP = CY + INTRO_H + 60;
 const CONTACT_LEFT = CX - INTRO_W / 2 - CONTACT_W - 80;
 const CONTACT_TOP = CY - 20 - CONTACT_H / 2;
 
+/** Bounding box of the four root cards — what the initial view has to show in full. */
+const ROOT_BOUNDS = {
+  left: CONTACT_LEFT,
+  right: PROJECTS_LEFT + PROJECTS_W,
+  top: Math.min(INTRO_TOP, PROJECTS_TOP, CONTACT_TOP),
+  bottom: ABOUT_TOP + ABOUT_H,
+};
+
+const MIN_SCALE = 0.5;
+const MAX_SCALE = 1.8;
+const DEFAULT_SCALE = 0.85;
+const FIT_PADDING = 48;
+
+/** Scale and offset that center all root cards in a viewport of the given size. */
+function fitRootsToViewport(width: number, height: number) {
+  const boundsW = ROOT_BOUNDS.right - ROOT_BOUNDS.left;
+  const boundsH = ROOT_BOUNDS.bottom - ROOT_BOUNDS.top;
+  const fit = Math.min((width - FIT_PADDING * 2) / boundsW, (height - FIT_PADDING * 2) / boundsH);
+  const scale = Math.min(DEFAULT_SCALE, Math.max(MIN_SCALE, fit));
+  const centerX = (ROOT_BOUNDS.left + ROOT_BOUNDS.right) / 2;
+  const centerY = (ROOT_BOUNDS.top + ROOT_BOUNDS.bottom) / 2;
+  return { scale, x: width / 2 - centerX * scale, y: height / 2 - centerY * scale };
+}
+
 const { CARD_W, CARD_H } = LAYOUT;
 
-export function Canvas() {
+/** Camera pans are instant for visitors who prefer reduced motion. */
+function panDuration() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 500;
+}
+
+/**
+ * On-screen canvas controls: back to the page, zoom in/out, recenter, and a short usage hint.
+ * Keyboard: + / − to zoom, 0 to recenter (ignored while typing in the contact form).
+ */
+function CanvasControls({
+  containerRef,
+  onReset,
+  onExit,
+}: {
+  containerRef: React.RefObject<HTMLElement | null>;
+  onReset: () => void;
+  onExit: () => void;
+}) {
+  const { zoomIn, zoomOut, setTransform } = useControls();
+  const transformContext = useTransformContext();
+
+  // Keyboard users: when Tab lands on a card outside the visible area, pan the canvas to it.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const onFocusIn = (event: FocusEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element) || target.closest("[data-canvas-chrome]")) return;
+      // The browser may natively scroll the clipped wrapper to reveal focus; undo that first.
+      const wrapper = container.querySelector(".react-transform-wrapper");
+      if (wrapper) {
+        wrapper.scrollTop = 0;
+        wrapper.scrollLeft = 0;
+      }
+      const rect = target.getBoundingClientRect();
+      const box = container.getBoundingClientRect();
+      const margin = 80;
+      const inView =
+        rect.left >= box.left + margin &&
+        rect.right <= box.right - margin &&
+        rect.top >= box.top + margin &&
+        rect.bottom <= box.bottom - margin;
+      if (inView) return;
+      const { positionX, positionY, scale } = transformContext.transformState;
+      const dx = box.left + box.width / 2 - (rect.left + rect.width / 2);
+      const dy = box.top + box.height / 2 - (rect.top + rect.height / 2);
+      setTransform(positionX + dx, positionY + dy, scale, panDuration(), "easeOutCubic");
+    };
+    container.addEventListener("focusin", onFocusIn);
+    return () => container.removeEventListener("focusin", onFocusIn);
+  }, [containerRef, setTransform, transformContext]);
+
+  const recenter = useCallback(() => {
+    onReset();
+    const container = containerRef.current;
+    if (!container) return;
+    const fit = fitRootsToViewport(container.clientWidth, container.clientHeight);
+    setTransform(fit.x, fit.y, fit.scale, panDuration(), "easeOutCubic");
+  }, [containerRef, onReset, setTransform]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (event.metaKey || event.ctrlKey || target?.closest("input, textarea, [contenteditable]")) return;
+      if (event.key === "+" || event.key === "=") zoomIn(0.3);
+      else if (event.key === "-" || event.key === "_") zoomOut(0.3);
+      else if (event.key === "0") recenter();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [zoomIn, zoomOut, recenter]);
+
+  const buttonClass =
+    "flex h-10 w-10 items-center justify-center text-[var(--theme-base)] transition-colors hover:bg-[var(--theme-accent)]/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--theme-accent)]";
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onExit}
+        data-canvas-chrome
+        className="fixed left-4 top-4 z-50 inline-flex h-10 items-center gap-2 border border-[var(--theme-pencil-light)] bg-[var(--theme-card-bg)] px-3 text-sm font-medium text-[var(--theme-base)] shadow-sm transition-colors hover:border-[var(--theme-accent)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]"
+      >
+        <span aria-hidden>←</span> Back to page view
+      </button>
+      <div
+        className="fixed bottom-5 right-5 z-50 flex flex-col border border-[var(--theme-pencil-light)] bg-[var(--theme-card-bg)] shadow-sm"
+        role="group"
+        aria-label="Canvas zoom"
+        data-canvas-chrome
+      >
+        <button type="button" onClick={() => zoomIn(0.3)} className={buttonClass} aria-label="Zoom in" aria-keyshortcuts="+">
+          <span aria-hidden className="text-lg leading-none">+</span>
+        </button>
+        <button type="button" onClick={() => zoomOut(0.3)} className={`${buttonClass} border-y border-[var(--theme-pencil-light)]/50`} aria-label="Zoom out" aria-keyshortcuts="-">
+          <span aria-hidden className="text-lg leading-none">−</span>
+        </button>
+        <button type="button" onClick={recenter} className={buttonClass} aria-label="Recenter and collapse" aria-keyshortcuts="0">
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+            <circle cx="12" cy="12" r="3" strokeWidth={2} />
+            <path strokeLinecap="round" strokeWidth={2} d="M12 2v4m0 12v4M2 12h4m12 0h4" />
+          </svg>
+        </button>
+      </div>
+      <p className="pointer-events-none fixed bottom-6 left-1/2 z-40 -translate-x-1/2 border border-[var(--theme-pencil-light)]/60 bg-[var(--theme-card-bg)]/90 px-3 py-1.5 text-xs text-[var(--theme-base-muted)] backdrop-blur-sm">
+        Drag to pan · Scroll to zoom · Click a card to open it
+      </p>
+    </>
+  );
+}
+
+/** Ignores keys bubbling up from links and buttons nested inside a clickable card. */
+function isOwnKey(event: React.KeyboardEvent) {
+  return event.target === event.currentTarget && (event.key === "Enter" || event.key === " ");
+}
+
+/** Opt-in "explore as canvas" view: the portfolio as a pannable, zoomable sketch map (≥1024px). */
+export function CanvasView({
+  darkMode,
+  resumeUrl,
+  onSelectProject,
+  onSelectExperience,
+  onOpenBio,
+  onExit,
+}: {
+  darkMode: boolean;
+  resumeUrl: string | null;
+  onSelectProject: (project: Project) => void;
+  onSelectExperience: (experience: Experience) => void;
+  onOpenBio: () => void;
+  /** Return to the scroll page. */
+  onExit: () => void;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const prevPathKeyRef = useRef("");
-  const [isDesktop, setIsDesktop] = useState(true);
+  const [initialView] = useState(() => fitRootsToViewport(window.innerWidth, window.innerHeight));
   const [expandedPath, setExpandedPath] = useState<string[]>([]);
-  const [darkMode, setDarkMode] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
   const [introHovered, setIntroHovered] = useState(false);
   const [inquiryFormOpen, setInquiryFormOpen] = useState(false);
-  const [inquiryName, setInquiryName] = useState("");
-  const [inquiryEmail, setInquiryEmail] = useState("");
-  const [inquiryDescription, setInquiryDescription] = useState("");
-  const [inquirySubmitting, setInquirySubmitting] = useState(false);
-  const [inquirySuccess, setInquirySuccess] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [selectedExperience, setSelectedExperience] = useState<Experience | null>(null);
-  const [bioOpen, setBioOpen] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 768px)");
-    setIsDesktop(mq.matches);
-    const handler = () => setIsDesktop(mq.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("theme");
-    if (stored === "dark") {
-      setDarkMode(true);
-    } else if (stored === "light") {
-      setDarkMode(false);
-    } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-      setDarkMode(true);
-    }
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-    const root = document.documentElement;
-    if (darkMode) {
-      root.classList.add("dark");
-      root.setAttribute("data-theme", "dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      root.classList.remove("dark");
-      root.removeAttribute("data-theme");
-      localStorage.setItem("theme", "light");
-    }
-  }, [darkMode, mounted]);
+  const inquiry = useInquiryForm();
+  const resetInquiry = inquiry.reset;
 
   const toggleRoot = useCallback((rootId: string) => {
+    setInquiryFormOpen(false);
     setExpandedPath((prev) => {
       if (prev[0] !== rootId) return [rootId];
       // Return to the root card from a nested card. This keeps the root
@@ -123,6 +234,7 @@ export function Canvas() {
 
   const expandToCard = useCallback((nodeId: string) => {
     const nodePath = getPathToNode(nodeId);
+    setInquiryFormOpen(false);
     setExpandedPath((prev) => {
       const isAlreadyExpanded =
         prev.length === nodePath.length && prev.every((id, index) => id === nodePath[index]);
@@ -130,12 +242,17 @@ export function Canvas() {
     });
   }, []);
 
-  useEffect(() => {
-    if (expandedPath[0] !== "contact") {
-      setInquiryFormOpen(false);
-      setInquirySuccess(false);
-    }
-  }, [expandedPath]);
+  /** Collapses everything back to the overview. */
+  const resetCanvas = useCallback(() => {
+    setInquiryFormOpen(false);
+    setExpandedPath([]);
+  }, []);
+
+  const openInquiryForm = useCallback(() => {
+    resetInquiry();
+    setExpandedPath(["contact"]);
+    setInquiryFormOpen(true);
+  }, [resetInquiry]);
 
   const positions = getCardPositions(expandedPath, ROOT_CENTERS);
   const activeRootId = expandedPath[0];
@@ -147,27 +264,6 @@ export function Canvas() {
     !expandedPath.includes(nodeId) &&
     !(activeCardId && getChildrenIds(activeCardId).includes(nodeId));
 
-
-  if (!mounted) {
-    return <div className="relative h-screen w-full overflow-hidden bg-[var(--theme-background)]" />;
-  }
-
-  if (!isDesktop) {
-    return (
-      <CanvasScrollFallback
-        darkMode={darkMode}
-        setDarkMode={setDarkMode}
-        selectedProject={selectedProject}
-        onCloseProject={() => setSelectedProject(null)}
-        onSelectProject={setSelectedProject}
-        selectedExperience={selectedExperience}
-        onCloseExperience={() => setSelectedExperience(null)}
-        onSelectExperience={setSelectedExperience}
-      />
-    );
-  }
-
-
   const contentStyle = {
     width: CANVAS_WIDTH,
     height: CANVAS_HEIGHT,
@@ -176,55 +272,20 @@ export function Canvas() {
     // and the "ripple" effect handles the transition.
   };
 
-  const toggleTheme = async () => {
-    if (
-      !document.startViewTransition ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ) {
-      setDarkMode(!darkMode);
-      return;
-    }
-
-    // Coordinates of the theme toggle button (top-right)
-    // Approx center: right-4 (1rem=16px) + half button (20px) = 36px from right logic
-    const x = window.innerWidth - 36;
-    const y = 36;
-    const endRadius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
-
-    const transition = document.startViewTransition(() => {
-      setDarkMode(!darkMode);
-    });
-
-    await transition.ready;
-
-    // Animate the clip-path of the NEW view
-    document.documentElement.animate(
-      {
-        clipPath: [
-          `circle(0px at ${x}px ${y}px)`,
-          `circle(${endRadius}px at ${x}px ${y}px)`,
-        ],
-      },
-      {
-        duration: 800,
-        easing: "ease-in-out",
-        pseudoElement: "::view-transition-new(root)",
-      }
-    );
-  };
+  const introButtonClass = `inline-flex items-center gap-2 border px-4 py-2 text-sm font-semibold transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)] ${
+    introHovered
+      ? "border-white text-white hover:bg-white hover:text-black"
+      : "border-[var(--theme-pencil-light)] text-[var(--theme-base)] hover:border-[var(--theme-accent)] hover:text-[var(--theme-accent-ink)]"
+  }`;
 
   return (
-    <div ref={containerRef} className="relative h-screen w-full overflow-hidden bg-[var(--theme-background)]">
-      <ProjectModal project={selectedProject} onClose={() => setSelectedProject(null)} />
-      <ExperienceModal experience={selectedExperience} onClose={() => setSelectedExperience(null)} />
-      <BioModal open={bioOpen} biography={aboutText} onClose={() => setBioOpen(false)} />
-      <ThemeToggle darkMode={darkMode} toggle={toggleTheme} />
-
+    <main ref={containerRef} className="relative h-screen w-full overflow-hidden bg-[var(--theme-background)]">
       <TransformWrapper
-        initialScale={0.85}
-        minScale={0.4}
-        maxScale={1.8}
-        centerOnInit
+        initialScale={initialView.scale}
+        initialPositionX={initialView.x}
+        initialPositionY={initialView.y}
+        minScale={MIN_SCALE}
+        maxScale={MAX_SCALE}
         limitToBounds={false}
         panning={{ velocityDisabled: true }}
         doubleClick={{ disabled: true }}
@@ -236,6 +297,7 @@ export function Canvas() {
           prevPathKeyRef={prevPathKeyRef}
           inquiryFormOpen={inquiryFormOpen}
         />
+        <CanvasControls containerRef={containerRef} onReset={resetCanvas} onExit={onExit} />
         <TransformComponent wrapperStyle={{ width: "100%", height: "100%", cursor: "grab" }} contentStyle={contentStyle}>
           <div className="relative canvas-grab" style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }}>
             {/* Grid texture — fainter overall, more visible near nodes, fades to background away */}
@@ -353,22 +415,22 @@ export function Canvas() {
                       onClick={(e) => {
                         if (isInquiryTrigger) {
                           e.stopPropagation();
-                          setInquiryFormOpen(true);
+                          openInquiryForm();
                           return;
                         }
                         if (node.project) {
                           e.stopPropagation();
-                          setSelectedProject(node.project);
+                          onSelectProject(node.project);
                           return;
                         }
                         if (experience) {
                           e.stopPropagation();
-                          setSelectedExperience(experience);
+                          onSelectExperience(experience);
                           return;
                         }
                         if (isBioCard) {
                           e.stopPropagation();
-                          setBioOpen(true);
+                          onOpenBio();
                           return;
                         }
                         if (hasChildren) {
@@ -379,22 +441,22 @@ export function Canvas() {
                       onKeyDown={(e) => {
                         if (isInquiryTrigger && (e.key === "Enter" || e.key === " ")) {
                           e.preventDefault();
-                          setInquiryFormOpen(true);
+                          openInquiryForm();
                           return;
                         }
                         if (node.project && (e.key === "Enter" || e.key === " ")) {
                           e.preventDefault();
-                          setSelectedProject(node.project);
+                          onSelectProject(node.project);
                           return;
                         }
                         if (experience && (e.key === "Enter" || e.key === " ")) {
                           e.preventDefault();
-                          setSelectedExperience(experience);
+                          onSelectExperience(experience);
                           return;
                         }
                         if (isBioCard && (e.key === "Enter" || e.key === " ")) {
                           e.preventDefault();
-                          setBioOpen(true);
+                          onOpenBio();
                           return;
                         }
                         if (hasChildren && (e.key === "Enter" || e.key === " ")) {
@@ -406,7 +468,7 @@ export function Canvas() {
                       tabIndex={hasChildren || isInquiryTrigger || node.project || isExperienceCard || isBioCard ? 0 : undefined}
                       aria-label={
                         isInquiryTrigger
-                          ? "Open feedback form"
+                          ? "Open contact form"
                           : node.project
                             ? `View ${node.label}`
                             : isExperienceCard
@@ -438,7 +500,7 @@ export function Canvas() {
                   );
                 });
               })}
-              {/* Exploded inquiry form: name, email, description, submit (sketch nodes) */}
+              {/* Exploded contact form: name, email, message, submit (sketch nodes) */}
               {expandedPath[0] === "contact" && inquiryFormOpen && (() => {
                 const inquiryPos = positions.get("inquiry");
                 if (!inquiryPos) return null;
@@ -458,38 +520,13 @@ export function Canvas() {
                 const btnY = descY + dh + gap;
                 const left = cx - fw / 2;
                 const btnLeft = cx - bw / 2;
-                const submitInquiry = async () => {
-                  if (!inquiryName.trim() || !inquiryEmail.trim() || !inquiryDescription.trim()) return;
-                  setInquirySubmitting(true);
-                  try {
-                    const res = await fetch("/api/inquiry", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        name: inquiryName.trim(),
-                        email: inquiryEmail.trim(),
-                        description: inquiryDescription.trim(),
-                      }),
-                    });
-                    const data = await res.json().catch(() => ({}));
-                    if (res.ok) {
-                      setInquirySuccess(true);
-                      setInquiryName("");
-                      setInquiryEmail("");
-                      setInquiryDescription("");
-                      setTimeout(() => {
-                        setInquiryFormOpen(false);
-                        setInquirySuccess(false);
-                      }, 1800);
-                    } else {
-                      alert(data.error ?? "Something went wrong.");
-                    }
-                  } catch {
-                    alert("Failed to send. Please try again.");
-                  } finally {
-                    setInquirySubmitting(false);
-                  }
-                };
+                const submitting = inquiry.status === "submitting";
+                const statusMessage =
+                  inquiry.status === "error"
+                    ? inquiry.error
+                    : inquiry.status === "success"
+                      ? "Thanks — your message is on its way. I'll get back to you soon."
+                      : null;
                 return (
                   <g style={{ pointerEvents: "auto" }}>
                     <SketchFieldNode
@@ -498,8 +535,10 @@ export function Canvas() {
                       width={fw}
                       height={fh}
                       label="Name"
-                      value={inquiryName}
-                      onChange={setInquiryName}
+                      autoComplete="name"
+                      maxLength={INQUIRY_LIMITS.name}
+                      value={inquiry.values.name}
+                      onChange={(value) => inquiry.setField("name", value)}
                       index={0}
                       darkMode={darkMode}
                     />
@@ -510,8 +549,10 @@ export function Canvas() {
                       height={fh}
                       label="Email"
                       type="email"
-                      value={inquiryEmail}
-                      onChange={setInquiryEmail}
+                      autoComplete="email"
+                      maxLength={INQUIRY_LIMITS.email}
+                      value={inquiry.values.email}
+                      onChange={(value) => inquiry.setField("email", value)}
                       index={1}
                       darkMode={darkMode}
                     />
@@ -521,10 +562,11 @@ export function Canvas() {
                       width={dw}
                       height={dh}
                       label="Message"
-                      value={inquiryDescription}
-                      onChange={setInquiryDescription}
+                      maxLength={INQUIRY_LIMITS.message}
+                      value={inquiry.values.message}
+                      onChange={(value) => inquiry.setField("message", value)}
                       multiline
-                      placeholder="Your feedback or comment…"
+                      placeholder="What are you working on?"
                       index={2}
                       darkMode={darkMode}
                     />
@@ -533,30 +575,42 @@ export function Canvas() {
                       y={btnY}
                       width={bw}
                       height={bh}
-                      label={inquirySuccess ? "Sent ✓" : inquirySubmitting ? "Sending…" : "Submit"}
-                      onClick={submitInquiry}
-                      disabled={inquirySubmitting || inquirySuccess}
+                      label={inquiry.status === "success" ? "Sent ✓" : submitting ? "Sending…" : "Send"}
+                      onClick={inquiry.submit}
+                      disabled={submitting}
                       index={3}
                     />
+                    <foreignObject x={left} y={btnY + bh + 8} width={fw} height={56}>
+                      <p
+                        aria-live="polite"
+                        className="text-center text-xs leading-snug"
+                        style={{
+                          fontFamily: "var(--font-sans), system-ui, sans-serif",
+                          color: inquiry.status === "error" ? "var(--theme-error)" : "var(--theme-accent)",
+                        }}
+                      >
+                        {statusMessage && (
+                          // Background keeps the text readable where the connector line passes behind it.
+                          <span className="bg-[var(--theme-background)] px-1">{statusMessage}</span>
+                        )}
+                      </p>
+                    </foreignObject>
                   </g>
                 );
               })()}
             </svg>
 
-            {/* Intro — reset canvas and return to center */}
+            {/* Intro — hero card; clicking its background resets the canvas */}
             <div
               role="button"
               tabIndex={0}
               className="absolute"
-              style={{
-                left: CX - INTRO_W / 2,
-                top: CY - 80 - INTRO_H / 2,
-              }}
-              onClick={() => setExpandedPath([])}
+              style={{ left: INTRO_LEFT, top: INTRO_TOP }}
+              onClick={resetCanvas}
               onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
+                if (isOwnKey(event)) {
                   event.preventDefault();
-                  setExpandedPath([]);
+                  resetCanvas();
                 }
               }}
               onMouseEnter={() => setIntroHovered(true)}
@@ -600,12 +654,33 @@ export function Canvas() {
                     </h1>
                   </div>
                   <p
-                    className={`mt-4 text-lg transition-colors duration-500 ${
-                      introHovered ? "text-white/90 drop-shadow-md" : "text-[var(--theme-base-muted)]"
+                    className={`mt-3 text-base leading-snug transition-colors duration-500 ${
+                      introHovered ? "text-white/90 drop-shadow-md" : "text-[var(--theme-base)]"
                     }`}
                   >
-                    Full-stack developer
+                    {hero.headline}
                   </p>
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setInquiryFormOpen(false);
+                        setExpandedPath(["projects"]);
+                      }}
+                      className={introButtonClass}
+                    >
+                      View projects
+                    </button>
+                    {resumeUrl && (
+                      <a href={resumeUrl} download onClick={(e) => e.stopPropagation()} className={introButtonClass}>
+                        Download CV
+                      </a>
+                    )}
+                    <a href={`mailto:${contact.email}`} onClick={(e) => e.stopPropagation()} className={introButtonClass}>
+                      Email me
+                    </a>
+                  </div>
                 </div>
               </SectionNode>
             </div>
@@ -620,7 +695,7 @@ export function Canvas() {
                 tabIndex={0}
                 onClick={() => toggleRoot("projects")}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
+                  if (isOwnKey(e)) {
                     e.preventDefault();
                     toggleRoot("projects");
                   }
@@ -640,12 +715,13 @@ export function Canvas() {
                 >
                   {expandedPath[0] !== "projects" && (
                     <p className="text-sm text-[var(--theme-base-muted)]">
-                      Click to expand and explore project nodes. Project Alpha expands into Tech, Demo, Repo — then each can expand further.
+                      {featuredProjects.length} featured case studies plus {projects.length - featuredProjects.length} more
+                      — payments, healthcare and marketplaces. Click to see them, then pick one for the full story.
                     </p>
                   )}
                   {expandedPath[0] === "projects" && expandedPath.length === 1 && (
                     <p className="text-sm text-[var(--theme-base-muted)]">
-                      Click a card to expand. Click again on section to collapse.
+                      Click a project for the full case study. Click this card again to collapse.
                     </p>
                   )}
                 </SectionNode>
@@ -662,7 +738,7 @@ export function Canvas() {
                 tabIndex={0}
                 onClick={() => toggleRoot("about")}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
+                  if (isOwnKey(e)) {
                     e.preventDefault();
                     toggleRoot("about");
                   }
@@ -700,7 +776,7 @@ export function Canvas() {
                 tabIndex={0}
                 onClick={() => toggleRoot("contact")}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
+                  if (isOwnKey(e)) {
                     e.preventDefault();
                     toggleRoot("contact");
                   }
@@ -723,9 +799,9 @@ export function Canvas() {
                       <a
                         href={`mailto:${contact.email}`}
                         onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-2.5 text-sm font-medium text-[var(--theme-base)] transition-colors duration-200 hover:text-[var(--theme-accent)]"
+                        className="flex items-center gap-2.5 text-sm font-medium text-[var(--theme-base)] transition-colors duration-200 hover:text-[var(--theme-accent-ink)]"
                       >
-                        <EmailIcon className="h-4 w-4 shrink-0 text-[var(--theme-accent)]" />
+                        <EmailIcon className="h-4 w-4 shrink-0 text-[var(--theme-accent-ink)]" />
                         <span className="underline decoration-[var(--theme-pencil-light)] underline-offset-2">
                           {contact.email}
                         </span>
@@ -733,9 +809,9 @@ export function Canvas() {
                       <a
                         href={`tel:${contact.phone}`}
                         onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-2.5 text-sm font-medium text-[var(--theme-base)] transition-colors duration-200 hover:text-[var(--theme-accent)]"
+                        className="flex items-center gap-2.5 text-sm font-medium text-[var(--theme-base)] transition-colors duration-200 hover:text-[var(--theme-accent-ink)]"
                       >
-                        <PhoneIcon className="h-4 w-4 shrink-0 text-[var(--theme-accent)]" />
+                        <PhoneIcon className="h-4 w-4 shrink-0 text-[var(--theme-accent-ink)]" />
                         <span className="underline decoration-[var(--theme-pencil-light)] underline-offset-2">
                           {contact.phone}
                         </span>
@@ -749,25 +825,36 @@ export function Canvas() {
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}
                               aria-label={label}
-                              className="flex h-8 w-8 items-center justify-center rounded-none border border-[var(--theme-pencil-light)] text-[var(--theme-base-muted)] transition-colors duration-200 hover:border-[var(--theme-accent)] hover:text-[var(--theme-accent)]"
+                              className="flex h-8 w-8 items-center justify-center rounded-none border border-[var(--theme-pencil-light)] text-[var(--theme-base-muted)] transition-colors duration-200 hover:border-[var(--theme-accent)] hover:text-[var(--theme-accent-ink)]"
                             >
                               {isSocialIcon(label) ? <SocialIcon label={label} className="h-4 w-4" /> : label}
                             </a>
                           </li>
                         ))}
                       </ul>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setExpandedPath(["contact"]);
-                          setInquiryFormOpen(true);
-                        }}
-                        className="mt-2 inline-flex w-fit items-center gap-2 rounded-none border border-[var(--theme-accent)] px-3.5 py-1.5 text-xs font-semibold text-[var(--theme-accent)] transition-colors duration-200 hover:bg-[var(--theme-accent)] hover:text-white"
-                      >
-                        <SendIcon className="h-3.5 w-3.5 shrink-0" />
-                        Click to send a message
-                      </button>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openInquiryForm();
+                          }}
+                          className="inline-flex w-fit items-center gap-2 rounded-none border border-[var(--theme-accent)] px-3.5 py-1.5 text-xs font-semibold text-[var(--theme-accent-ink)] transition-colors duration-200 hover:bg-[var(--theme-accent)] hover:text-white"
+                        >
+                          <SendIcon className="h-3.5 w-3.5 shrink-0" />
+                          Send a message
+                        </button>
+                        {resumeUrl && (
+                          <a
+                            href={resumeUrl}
+                            download
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex w-fit items-center rounded-none border border-[var(--theme-pencil-light)] px-3.5 py-1.5 text-xs font-semibold text-[var(--theme-base)] transition-colors duration-200 hover:border-[var(--theme-accent)] hover:text-[var(--theme-accent-ink)]"
+                          >
+                            Download CV
+                          </a>
+                        )}
+                      </div>
                     </div>
                   )}
                   {expandedPath[0] === "contact" && expandedPath.length === 1 && (
@@ -781,11 +868,14 @@ export function Canvas() {
           </div>
         </TransformComponent>
       </TransformWrapper>
-    </div>
+    </main>
   );
 }
 
-/** Pans viewport to the active and (expanded) node whenever the user taps a section or expands a card. */
+/**
+ * Pans the viewport to the active (expanded) node whenever the user taps a section or expands a card.
+ * With nothing expanded it frames all root cards, and keeps them framed when the window resizes.
+ */
 function PanToExpandedNode({
   expandedPath,
   positions,
@@ -795,23 +885,35 @@ function PanToExpandedNode({
 }: {
   expandedPath: string[];
   positions: Map<string, { x: number; y: number }>;
-  containerRef: React.RefObject<HTMLDivElement | null>;
+  containerRef: React.RefObject<HTMLElement | null>;
   prevPathKeyRef: React.MutableRefObject<string>;
   inquiryFormOpen: boolean;
 }) {
   const ctx = useTransformContext();
   // Derive a stable key so inquiry open/close re-pans without changing dep array shape mid-session.
   const pathKey = `${expandedPath.join(",")}|inquiry:${inquiryFormOpen ? "1" : "0"}`;
+  const isCollapsed = expandedPath.length === 0;
+
   useEffect(() => {
     if (pathKey === prevPathKeyRef.current) return;
     prevPathKeyRef.current = pathKey;
 
+    const container = containerRef.current;
+    const ref = ctx?.getContext?.();
+    if (!container || !ref?.setTransform) return;
+
     const pathIds = pathKey.split("|")[0];
+    if (!pathIds) {
+      const fit = fitRootsToViewport(container.clientWidth, container.clientHeight);
+      ref.setTransform(fit.x, fit.y, fit.scale, panDuration(), "easeOutCubic");
+      return;
+    }
+
     const formOpen = pathKey.endsWith("|inquiry:1");
-    const activeId = pathIds ? pathIds.split(",").at(-1) || "intro" : "intro";
+    const activeId = pathIds.split(",").at(-1) || "intro";
     let targetPos = positions.get(activeId);
 
-    // Contact + Send feedback: frame both so the feedback card isn't clipped at the top.
+    // Contact + Send a message: frame both so the message card isn't clipped at the top.
     if (pathIds === "contact" && !formOpen) {
       const contactPos = positions.get("contact");
       const inquiryPos = positions.get("inquiry");
@@ -823,22 +925,34 @@ function PanToExpandedNode({
       }
     }
 
-    // Feedback form open: center on the name / email / message stack.
+    // Contact form open: center on the name / email / message stack.
     if (pathIds.startsWith("contact") && formOpen) {
       const inquiryPos = positions.get("inquiry");
       if (inquiryPos) targetPos = inquiryPos;
     }
 
-    const container = containerRef.current;
-    const ref = ctx?.getContext?.();
-    if (!targetPos || !container || !ref?.setTransform) return;
-    const scale = ctx.transformState?.scale ?? 0.85;
+    if (!targetPos) return;
+    const scale = ctx.transformState?.scale ?? DEFAULT_SCALE;
     const w = container.clientWidth;
     const h = container.clientHeight;
     const newX = w / 2 - targetPos.x * scale;
     const newY = h / 2 - targetPos.y * scale;
-    ref.setTransform(newX, newY, scale, 500, "easeOutCubic");
+    ref.setTransform(newX, newY, scale, panDuration(), "easeOutCubic");
   }, [pathKey, positions, containerRef, prevPathKeyRef]);
+
+  useEffect(() => {
+    if (!isCollapsed) return;
+    const onResize = () => {
+      const container = containerRef.current;
+      const ref = ctx?.getContext?.();
+      if (!container || !ref?.setTransform) return;
+      const fit = fitRootsToViewport(container.clientWidth, container.clientHeight);
+      ref.setTransform(fit.x, fit.y, fit.scale, 0);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [isCollapsed, containerRef, ctx]);
+
   return null;
 }
 
@@ -937,356 +1051,5 @@ function CanvasSketchLines({ darkMode }: { darkMode: boolean }) {
 
   return (
     <svg ref={svgRef} className="pointer-events-none absolute inset-0" width={CANVAS_WIDTH} height={CANVAS_HEIGHT} aria-hidden />
-  );
-}
-
-function ScrollReveal({
-  children,
-  className = "",
-  delay = 0,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  delay?: number;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-60px" });
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 28 }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 28 }}
-      transition={{ duration: 0.55, ease: [0.25, 0.1, 0.25, 1], delay }}
-      className={className}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-function NavDot({
-  targetId,
-  label,
-  active,
-}: {
-  targetId: string;
-  label: string;
-  active: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth" })}
-      className="group flex flex-col items-center gap-1"
-      aria-label={`Go to ${label}`}
-    >
-      <span
-        className={`block h-2 w-2 rounded-full border transition-all duration-300 ${
-          active
-            ? "scale-125 border-[var(--theme-accent)] bg-[var(--theme-accent)]"
-            : "border-[var(--theme-pencil-light)] bg-transparent group-hover:border-[var(--theme-accent)]"
-        }`}
-      />
-      <span
-        className={`text-[9px] font-medium uppercase tracking-widest transition-colors duration-300 ${
-          active ? "text-[var(--theme-accent)]" : "text-[var(--theme-pencil-light)]"
-        }`}
-      >
-        {label}
-      </span>
-    </button>
-  );
-}
-
-function CanvasScrollFallback({
-  darkMode,
-  setDarkMode,
-  selectedProject,
-  onCloseProject,
-  onSelectProject,
-  selectedExperience,
-  onCloseExperience,
-  onSelectExperience,
-}: {
-  darkMode: boolean;
-  setDarkMode: React.Dispatch<React.SetStateAction<boolean>>;
-  selectedProject: Project | null;
-  onCloseProject: () => void;
-  onSelectProject: (project: Project) => void;
-  selectedExperience: Experience | null;
-  onCloseExperience: () => void;
-  onSelectExperience: (experience: Experience) => void;
-}) {
-  const [activeSection, setActiveSection] = useState("hero");
-  const [inquiryName, setInquiryName] = useState("");
-  const [inquiryEmail, setInquiryEmail] = useState("");
-  const [inquiryMessage, setInquiryMessage] = useState("");
-  const [inquirySubmitting, setInquirySubmitting] = useState(false);
-  const [inquirySuccess, setInquirySuccess] = useState(false);
-  const heroRef = useRef<HTMLElement>(null);
-  const projectsRef = useRef<HTMLElement>(null);
-  const aboutRef = useRef<HTMLElement>(null);
-  const contactRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setActiveSection(entry.target.id);
-          }
-        }
-      },
-      { threshold: 0.4 }
-    );
-
-    const targets = [heroRef.current, projectsRef.current, aboutRef.current, contactRef.current].filter(Boolean);
-    for (const target of targets) {
-      observer.observe(target as Element);
-    }
-
-    return () => observer.disconnect();
-  }, []);
-
-  const submitInquiry = async () => {
-    if (!inquiryName.trim() || !inquiryEmail.trim() || !inquiryMessage.trim()) return;
-    setInquirySubmitting(true);
-    try {
-      const res = await fetch("/api/inquiry", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: inquiryName.trim(),
-          email: inquiryEmail.trim(),
-          description: inquiryMessage.trim(),
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setInquirySuccess(true);
-        setInquiryName("");
-        setInquiryEmail("");
-        setInquiryMessage("");
-        setTimeout(() => setInquirySuccess(false), 2200);
-      } else {
-        alert(data.error ?? "Something went wrong.");
-      }
-    } catch {
-      alert("Failed to send. Please try again.");
-    } finally {
-      setInquirySubmitting(false);
-    }
-  };
-
-  return (
-    <div className="relative min-h-screen w-full overflow-x-hidden bg-[var(--theme-background)]">
-      <ProjectModal project={selectedProject} onClose={onCloseProject} />
-      <ExperienceModal experience={selectedExperience} onClose={onCloseExperience} />
-      <ThemeToggle darkMode={darkMode} toggle={() => setDarkMode((d) => !d)} />
-
-      <nav className="fixed right-3 top-1/2 z-50 flex -translate-y-1/2 flex-col gap-4" aria-label="Section navigation">
-        <NavDot targetId="hero" label="Top" active={activeSection === "hero"} />
-        <NavDot targetId="m-projects" label="Work" active={activeSection === "m-projects"} />
-        <NavDot targetId="m-about" label="About" active={activeSection === "m-about"} />
-        <NavDot targetId="m-contact" label="Contact" active={activeSection === "m-contact"} />
-      </nav>
-
-      <section ref={heroRef} id="hero" className="relative flex min-h-[100svh] flex-col items-center justify-center px-6 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
-          className="flex flex-col items-center"
-        >
-          <motion.div
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: 1 }}
-            transition={{ duration: 0.6, delay: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-            className="mb-6 h-px w-16 origin-left bg-[var(--theme-pencil-light)]"
-          />
-          <div className="flex items-center gap-3">
-            <img src="/logo.svg" alt="" className="h-8 w-8 shrink-0" />
-            <h1 className="text-3xl font-bold tracking-tight text-[var(--theme-base)] sm:text-4xl">Joshua T. Alemayehu</h1>
-          </div>
-          <p className="mt-3 max-w-xs text-base leading-relaxed text-[var(--theme-base-muted)]">
-            Full-stack developer
-          </p>
-          <motion.div
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: 1 }}
-            transition={{ duration: 0.6, delay: 0.45, ease: [0.25, 0.1, 0.25, 1] }}
-            className="mt-6 h-px w-16 origin-right bg-[var(--theme-pencil-light)]"
-          />
-
-          <div className="mt-9 flex items-center gap-5">
-            {contact.links.map(({ label, href }) => (
-              <a
-                key={label}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[var(--theme-pencil-light)] transition-colors duration-200 hover:text-[var(--theme-accent)] [&_svg]:h-5 [&_svg]:w-5"
-                aria-label={label}
-              >
-                {isSocialIcon(label) ? <SocialIcon label={label} /> : label}
-              </a>
-            ))}
-          </div>
-        </motion.div>
-      </section>
-
-      <section ref={projectsRef} id="m-projects" className="px-5 py-16 sm:px-8">
-        <ScrollReveal>
-          <h2 className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--theme-accent)]">Selected Work</h2>
-          <div className="mt-1 h-px w-8 bg-[var(--theme-accent)] opacity-40" />
-        </ScrollReveal>
-        <div className="mt-8 flex flex-col gap-5">
-          {projects.map((project, i) => (
-            <ScrollReveal key={project.id} delay={i * 0.08}>
-              <button
-                type="button"
-                onClick={() => onSelectProject(project)}
-                className="group relative w-full overflow-hidden border border-[var(--theme-pencil-light)] bg-[var(--theme-card-bg)] p-5 text-left transition-colors duration-300 active:scale-[0.98]"
-              >
-                <div className="pointer-events-none absolute inset-0 bg-[var(--theme-accent)] opacity-0 transition-opacity duration-300 group-active:opacity-[0.06]" />
-                {project.image && (
-                  <div className="mb-4 h-36 w-full overflow-hidden border border-[var(--theme-pencil-light)]/30">
-                    <img src={project.image} alt="" className="h-full w-full object-cover transition-transform duration-500 group-active:scale-105" />
-                  </div>
-                )}
-                <h3 className="text-lg font-semibold text-[var(--theme-base)]">{project.title}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-[var(--theme-base-muted)]">{project.description}</p>
-                <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Technologies">
-                  {project.tags.map((tag) => (
-                    <li key={tag} className="rounded border border-[var(--theme-pencil-light)] px-2 py-0.5 text-[11px] text-[var(--theme-base-muted)]">
-                      {tag}
-                    </li>
-                  ))}
-                </ul>
-              </button>
-            </ScrollReveal>
-          ))}
-        </div>
-      </section>
-
-      <section ref={aboutRef} id="m-about" className="px-5 py-16 sm:px-8">
-        <ScrollReveal>
-          <h2 className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--theme-accent)]">About</h2>
-          <div className="mt-1 h-px w-8 bg-[var(--theme-accent)] opacity-40" />
-        </ScrollReveal>
-        <ScrollReveal delay={0.1}>
-          <p className="mt-6 text-sm leading-[1.8] text-[var(--theme-base-muted)]">{aboutText}</p>
-        </ScrollReveal>
-
-        <ScrollReveal delay={0.15}>
-          <h3 className="mt-12 mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--theme-accent)]">Experience</h3>
-          <div className="mt-1 h-px w-8 bg-[var(--theme-accent)] opacity-40" />
-        </ScrollReveal>
-        <div className="mt-6 flex flex-col gap-6">
-          {experiences.map((exp, i) => (
-            <ScrollReveal key={exp.id} delay={0.18 + i * 0.05}>
-              <button
-                type="button"
-                onClick={() => onSelectExperience(exp)}
-                className="group w-full border border-transparent p-3 text-left transition-colors hover:border-[var(--theme-pencil-light)] hover:bg-[var(--theme-accent)]/[0.04] focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent)]"
-                aria-label={`View ${exp.role} at ${exp.company}`}
-              >
-                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                  <h4 className="text-sm font-semibold text-[var(--theme-base)]">{exp.role}</h4>
-                  <span className="text-[11px] tracking-wide text-[var(--theme-base-muted)]">{exp.period}</span>
-                </div>
-                <p className="mt-0.5 text-xs font-medium text-[var(--theme-accent)]">{exp.company}</p>
-                <p className="mt-2 text-sm leading-relaxed text-[var(--theme-base-muted)]">{exp.description}</p>
-                <ul className="mt-2.5 flex flex-wrap gap-1.5" aria-label="Technologies">
-                  {exp.technologies.map((tech) => (
-                    <li
-                      key={tech}
-                      className="border border-[var(--theme-pencil-light)] px-2 py-0.5 text-[10px] uppercase tracking-wider text-[var(--theme-base-muted)]"
-                    >
-                      {tech}
-                    </li>
-                  ))}
-                </ul>
-              </button>
-            </ScrollReveal>
-          ))}
-        </div>
-      </section>
-
-      <section ref={contactRef} id="m-contact" className="px-5 py-16 pb-24 sm:px-8">
-        <ScrollReveal>
-          <h2 className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--theme-accent)]">Get in Touch</h2>
-          <div className="mt-1 h-px w-8 bg-[var(--theme-accent)] opacity-40" />
-        </ScrollReveal>
-        <ScrollReveal delay={0.1}>
-          <div className="mt-6 flex flex-col gap-3">
-            <a
-              href={`mailto:${contact.email}`}
-              className="inline-flex items-center gap-2.5 text-sm font-medium text-[var(--theme-base)] underline decoration-[var(--theme-pencil-light)] underline-offset-4 transition-colors hover:decoration-[var(--theme-accent)]"
-            >
-              <EmailIcon className="h-4 w-4 shrink-0 text-[var(--theme-accent)]" />
-              {contact.email}
-            </a>
-            <a
-              href={`tel:${contact.phone}`}
-              className="inline-flex items-center gap-2.5 text-sm font-medium text-[var(--theme-base)] underline decoration-[var(--theme-pencil-light)] underline-offset-4 transition-colors hover:decoration-[var(--theme-accent)]"
-            >
-              <PhoneIcon className="h-4 w-4 shrink-0 text-[var(--theme-accent)]" />
-              {contact.phone}
-            </a>
-            <div className="mt-1 flex items-center gap-3">
-              {contact.links.map(({ label, href }) => (
-                <a
-                  key={label}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={label}
-                  className="flex h-9 w-9 items-center justify-center rounded-none border border-[var(--theme-pencil-light)] text-[var(--theme-base-muted)] transition-colors duration-200 hover:border-[var(--theme-accent)] hover:text-[var(--theme-accent)]"
-                >
-                  {isSocialIcon(label) ? <SocialIcon label={label} className="h-4 w-4" /> : label}
-                </a>
-              ))}
-            </div>
-          </div>
-        </ScrollReveal>
-        <ScrollReveal delay={0.2}>
-          <div className="mt-8 border border-[var(--theme-pencil-light)] bg-[var(--theme-card-bg)] p-5">
-            <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-wider text-[var(--theme-base-muted)]">Send a message</h3>
-            <div className="flex flex-col gap-3">
-              <input
-                type="text"
-                value={inquiryName}
-                onChange={(e) => setInquiryName(e.target.value)}
-                placeholder="Name"
-                className="w-full border border-[var(--theme-pencil-light)] bg-transparent px-3 py-2 text-sm text-[var(--theme-base)] placeholder:text-[var(--theme-pencil-light)] focus:border-[var(--theme-accent)] focus:outline-none"
-              />
-              <input
-                type="email"
-                value={inquiryEmail}
-                onChange={(e) => setInquiryEmail(e.target.value)}
-                placeholder="Email"
-                className="w-full border border-[var(--theme-pencil-light)] bg-transparent px-3 py-2 text-sm text-[var(--theme-base)] placeholder:text-[var(--theme-pencil-light)] focus:border-[var(--theme-accent)] focus:outline-none"
-              />
-              <textarea
-                rows={4}
-                value={inquiryMessage}
-                onChange={(e) => setInquiryMessage(e.target.value)}
-                placeholder="Your feedback or comment…"
-                className="w-full resize-none border border-[var(--theme-pencil-light)] bg-transparent px-3 py-2 text-sm text-[var(--theme-base)] placeholder:text-[var(--theme-pencil-light)] focus:border-[var(--theme-accent)] focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={submitInquiry}
-                disabled={inquirySubmitting || inquirySuccess}
-                className="mt-1 w-full border border-[var(--theme-pencil-light)] bg-transparent py-2.5 text-sm font-semibold text-[var(--theme-base)] transition-all duration-200 hover:border-[var(--theme-accent)] hover:text-[var(--theme-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--theme-accent)] disabled:opacity-50"
-              >
-                {inquirySuccess ? "Sent ✓" : inquirySubmitting ? "Sending..." : "Submit"}
-              </button>
-            </div>
-          </div>
-        </ScrollReveal>
-      </section>
-    </div>
   );
 }

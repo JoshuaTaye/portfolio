@@ -170,7 +170,7 @@ export function SketchCard({
           >
             <h3
               className={`text-sm font-semibold ${
-                isExpanded ? "text-[var(--theme-accent)]" : "text-[var(--theme-base)]"
+                isExpanded ? "text-[var(--theme-accent-ink)]" : "text-[var(--theme-base)]"
               }`}
             >
               {data.label}

@@ -113,7 +113,7 @@ export function SectionNode({
           {title && (
             <h2
               className={`mb-4 text-sm font-semibold uppercase tracking-wider ${
-                isExpanded ? "text-[var(--theme-accent)]" : "text-[var(--theme-base-muted)]"
+                isExpanded ? "text-[var(--theme-accent-ink)]" : "text-[var(--theme-base-muted)]"
               }`}
             >
               {title}
