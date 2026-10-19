@@ -96,7 +96,6 @@ export function SiteHeader({
           className="flex w-fit shrink-0 items-center gap-2 font-semibold text-[var(--theme-base)]"
         >
           <img src="/logo.svg" alt="" className="h-7 w-7" />
-          <span className="hidden text-sm sm:inline">Joshua T. Alemayehu</span>
         </Link>
 
         <nav aria-label="Sections" className="hidden md:block">

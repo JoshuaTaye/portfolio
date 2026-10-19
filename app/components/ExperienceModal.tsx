@@ -27,11 +27,11 @@ export function ExperienceModal({ experience, onClose }: ExperienceModalProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm dark:bg-black/70"
+            className="fixed inset-0 z-100 bg-black/50 backdrop-blur-sm dark:bg-black/70"
             onClick={onClose}
             aria-hidden
           />
-          <div className="fixed inset-0 z-[101] flex items-center justify-center p-4" onClick={onClose}>
+          <div className="fixed inset-0 z-101 flex items-center justify-center p-4" onClick={onClose}>
             <motion.article
               ref={dialogRef}
               tabIndex={-1}
@@ -63,10 +63,10 @@ export function ExperienceModal({ experience, onClose }: ExperienceModalProps) {
                 <h2 id="experience-modal-title" className="mt-2 pr-9 text-2xl font-bold tracking-tight text-[var(--theme-base)] sm:text-3xl">
                   {experience.role}
                 </h2>
-                <p className="mt-1 text-sm font-medium text-[var(--theme-accent-ink)]">{experience.company}</p>
-                <p className="mt-1 text-xs uppercase tracking-wider text-[var(--theme-base-muted)]">{experience.period}</p>
+                <p className="mt-1 text-sm font-medium text-(--theme-accent-ink)">{experience.company}</p>
+                <p className="mt-1 text-xs uppercase tracking-wider text-(--theme-base-muted)">{experience.period}</p>
 
-                <div className="mt-6 border-t border-[var(--theme-pencil-light)]/30 pt-5">
+                <div className="mt-6 border-t border-(--theme-pencil-light)/30 pt-5">
                   <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--theme-base-muted)]">
                     Role overview
                   </h3>
